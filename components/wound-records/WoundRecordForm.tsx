@@ -189,6 +189,20 @@ export default function WoundRecordForm({ patientId, appointmentId, onSaved }: W
         </div>
       </div>
 
+      <div className="space-y-2 pt-4 border-t border-[#A58079]/10">
+        <label className="text-sm font-semibold text-[#2D2422]">Anexar Documentos / Exames</label>
+        <div className="border-2 border-dashed border-[#A58079]/30 rounded-2xl p-6 flex flex-col items-center justify-center bg-[#F9F7F6] hover:bg-[#A58079]/5 transition-colors cursor-pointer group">
+          <input type="file" className="hidden" id="fileUpload" multiple />
+          <label htmlFor="fileUpload" className="flex flex-col items-center cursor-pointer w-full">
+            <svg className="w-8 h-8 text-[#A58079] mb-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span className="text-sm font-medium text-[#2D2422]">Clique para fazer upload</span>
+            <span className="text-xs text-[#6B5C59] mt-1">Imagens, PDFs e Exames (Max 10MB)</span>
+          </label>
+        </div>
+      </div>
+
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-600 text-sm font-medium">
           {error}

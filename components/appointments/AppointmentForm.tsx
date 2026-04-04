@@ -1,9 +1,17 @@
 "use client"
 import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { Check, Loader2 } from 'lucide-react'
 
 export default function AppointmentForm() {
-  const [cpf, setCpf] = useState('')
-  const [isSearchingCpf, setIsSearchingCpf] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [saving, setSaving] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
+
   const [patientData, setPatientData] = useState({
     name: '',
     dob: '',
@@ -13,30 +21,10 @@ export default function AppointmentForm() {
   })
   const [isSearchingCep, setIsSearchingCep] = useState(false)
 
-  // Simulated Supabase search function
-  const handleCpfBlur = async () => {
-    if (cpf.length < 11) return
-    
-    setIsSearchingCpf(true)
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    // Simulate finding a patient in the database
-    if (cpf.includes('123')) {
-      setPatientData({
-        name: 'Maria da Silva',
-        dob: '1985-05-20',
-        phone: '(11) 98765-4321',
-        cep: '01001-000',
-        address: 'Praça da Sé, Sé, São Paulo - SP' // Manual / Pre-filled address
-      })
-    }
-    
-    setIsSearchingCpf(false)
-  }
+  const [appointmentType, setAppointmentType] = useState<'clinic' | 'home'>('clinic')
+  const [scheduledAt, setScheduledAt] = useState('')
+  const [notes, setNotes] = useState('')
 
-  // ViaCEP search function
   const handleCepBlur = async () => {
     const cleanCep = patientData.cep.replace(/\D/g, '')
     if (cleanCep.length !== 8) return
@@ -49,43 +37,93 @@ export default function AppointmentForm() {
       if (!data.erro) {
         setPatientData(prev => ({
           ...prev,
-          address: `${data.logradouro}, , ${data.bairro}, ${data.localidade} - ${data.uf}`
+          address: `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`
         }))
       }
-    } catch (error) {
+    } catch (err) {
       console.error("Erro ao buscar CEP")
     }
     setIsSearchingCep(false)
   }
 
+  const handleSubmit = async () => {
+    if (!patientData.name.trim()) {
+      setError('Informe o nome do paciente.')
+      return
+    }
+    if (!scheduledAt) {
+      setError('Selecione a data e hora do agendamento.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    try {
+      // 1. Create the patient
+      const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .insert({
+          full_name: patientData.name.trim(),
+          date_of_birth: patientData.dob || null,
+          phone: patientData.phone || null,
+          address: patientData.address || null,
+        })
+        .select('id')
+        .single()
+
+      if (patientError) throw patientError
+
+      // 2. Create the appointment
+      const { error: appointmentError } = await supabase
+        .from('appointments')
+        .insert({
+          patient_id: patient.id,
+          type: appointmentType,
+          scheduled_at: new Date(scheduledAt).toISOString(),
+          notes: notes || null,
+          status: 'scheduled'
+        })
+
+      if (appointmentError) throw appointmentError
+
+      setSuccess(true)
+      setTimeout(() => router.push('/calendar'), 1500)
+    } catch (err: any) {
+      console.error('Erro ao salvar:', err)
+      setError(err.message || 'Erro ao salvar. Tente novamente.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+          <Check className="w-8 h-8 text-green-600" />
+        </div>
+        <h2 className="text-xl font-bold text-[#2D2422]">Agendamento Salvo!</h2>
+        <p className="text-[#6B5C59]">Redirecionando para a agenda...</p>
+      </div>
+    )
+  }
+
   return (
-    <form className="space-y-6">
+    <form onSubmit={(e) => { e.preventDefault(); handleSubmit() }} className="space-y-6">
       <div className="bg-white p-6 rounded-3xl border border-[#A58079]/10 shadow-sm">
         <h3 className="text-lg font-bold text-[#1A1514] mb-4 border-b border-[#A58079]/10 pb-2">1. Dados do Paciente</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Nome Completo</label>
+            <label className="text-sm font-semibold text-[#2D2422]">Nome Completo *</label>
             <input 
               type="text" 
               className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
               placeholder="Ex: Maria da Silva" 
               value={patientData.name}
               onChange={e => setPatientData({...patientData, name: e.target.value})}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-[#2D2422] flex items-center gap-2">
-              CPF 
-              {isSearchingCpf && <span className="text-xs text-[#A58079] animate-pulse">Buscando na base...</span>}
-            </label>
-            <input 
-              type="text" 
-              className={`w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans ${isSearchingCpf ? 'border-[#A58079]' : ''}`}
-              placeholder="Digite com números..." 
-              value={cpf}
-              onChange={e => setCpf(e.target.value)}
-              onBlur={handleCpfBlur}
+              required
             />
           </div>
           <div className="space-y-2">
@@ -122,7 +160,7 @@ export default function AppointmentForm() {
             />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Endereço Completo (Editável livremente)</label>
+            <label className="text-sm font-semibold text-[#2D2422]">Endereço Completo</label>
             <input 
               type="text" 
               className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
@@ -141,32 +179,62 @@ export default function AppointmentForm() {
           <div className="space-y-2 md:col-span-2">
             <label className="text-sm font-semibold text-[#2D2422]">Modalidade de Atendimento</label>
             <div className="flex gap-4">
-              <label className="flex flex-1 items-center justify-center p-3 rounded-2xl border border-[#A58079]/30 cursor-pointer hover:bg-[#A58079]/5 transition-colors bg-[#F9F7F6]">
-                <input type="radio" name="type" value="clinic" className="text-[#A58079] focus:ring-[#A58079] mr-2" defaultChecked />
+              <label className={`flex flex-1 items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors ${appointmentType === 'clinic' ? 'border-[#A58079] bg-[#A58079]/10' : 'border-[#A58079]/30 bg-[#F9F7F6] hover:bg-[#A58079]/5'}`}>
+                <input type="radio" name="type" value="clinic" className="text-[#A58079] focus:ring-[#A58079] mr-2" checked={appointmentType === 'clinic'} onChange={() => setAppointmentType('clinic')} />
                 <span className="font-medium text-[#2D2422]">Clínica</span>
               </label>
-              <label className="flex flex-1 items-center justify-center p-3 rounded-2xl border border-[#2D2422]/20 cursor-pointer hover:bg-[#2D2422]/5 transition-colors bg-[#F9F7F6]">
-                <input type="radio" name="type" value="home" className="text-[#2D2422] focus:ring-[#2D2422] mr-2" />
+              <label className={`flex flex-1 items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors ${appointmentType === 'home' ? 'border-[#2D2422] bg-[#2D2422]/10' : 'border-[#2D2422]/20 bg-[#F9F7F6] hover:bg-[#2D2422]/5'}`}>
+                <input type="radio" name="type" value="home" className="text-[#2D2422] focus:ring-[#2D2422] mr-2" checked={appointmentType === 'home'} onChange={() => setAppointmentType('home')} />
                 <span className="font-medium text-[#6B5C59]">Domiciliar</span>
               </label>
             </div>
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Data e Hora</label>
-            <input type="datetime-local" className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" />
+            <label className="text-sm font-semibold text-[#2D2422]">Data e Hora *</label>
+            <input 
+              type="datetime-local" 
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
+              value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              required
+            />
           </div>
         </div>
         
         <div className="space-y-2 mt-4">
           <label className="text-sm font-semibold text-[#2D2422]">Motivo do Agendamento (Opcional)</label>
-          <textarea className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans min-h-[80px]" placeholder="Primeira avaliação, troca de curativo, etc..."></textarea>
+          <textarea 
+            className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans min-h-[80px]" 
+            placeholder="Primeira avaliação, troca de curativo, etc..."
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+          />
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-600 text-sm font-medium">
+          {error}
+        </div>
+      )}
+
       <div className="flex justify-end gap-4 pt-4">
-        <button type="button" className="border border-[#A58079] text-[#A58079] hover:bg-[#A58079] hover:text-white rounded-full px-6 py-2 transition-all font-medium">Cancelar</button>
-        <button type="button" className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-8 py-3 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-2">Finalizar Cadastro e Agendar</button>
+        <button 
+          type="button" 
+          onClick={() => router.back()}
+          className="border border-[#A58079] text-[#A58079] hover:bg-[#A58079] hover:text-white rounded-full px-6 py-2 transition-all font-medium"
+        >
+          Cancelar
+        </button>
+        <button 
+          type="submit" 
+          disabled={saving}
+          className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-8 py-3 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {saving ? 'Salvando...' : 'Finalizar Cadastro e Agendar'}
+        </button>
       </div>
     </form>
   )

@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Check, Loader2 } from 'lucide-react'
+import { Check, Loader2, Search } from 'lucide-react'
 
 export default function AppointmentForm() {
   const router = useRouter()
@@ -11,6 +11,11 @@ export default function AppointmentForm() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+
+  const [cpf, setCpf] = useState('')
+  const [isSearchingCpf, setIsSearchingCpf] = useState(false)
+  const [cpfFound, setCpfFound] = useState(false)
+  const [existingPatientId, setExistingPatientId] = useState<string | null>(null)
 
   const [patientData, setPatientData] = useState({
     name: '',
@@ -24,6 +29,51 @@ export default function AppointmentForm() {
   const [appointmentType, setAppointmentType] = useState<'clinic' | 'home'>('clinic')
   const [scheduledAt, setScheduledAt] = useState('')
   const [notes, setNotes] = useState('')
+
+  const formatCpf = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11)
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+  }
+
+  const handleCpfChange = (value: string) => {
+    setCpf(formatCpf(value))
+    setCpfFound(false)
+    setExistingPatientId(null)
+  }
+
+  const handleCpfBlur = async () => {
+    const cleanCpf = cpf.replace(/\D/g, '')
+    if (cleanCpf.length < 11) return
+    
+    setIsSearchingCpf(true)
+    
+    try {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('cpf', cleanCpf)
+        .maybeSingle()
+
+      if (!error && data) {
+        setCpfFound(true)
+        setExistingPatientId(data.id)
+        setPatientData({
+          name: data.full_name || '',
+          dob: data.date_of_birth || '',
+          phone: data.phone || '',
+          cep: '',
+          address: data.address || ''
+        })
+      }
+    } catch (err) {
+      console.error("Erro ao buscar CPF:", err)
+    }
+    
+    setIsSearchingCpf(false)
+  }
 
   const handleCepBlur = async () => {
     const cleanCep = patientData.cep.replace(/\D/g, '')
@@ -47,6 +97,11 @@ export default function AppointmentForm() {
   }
 
   const handleSubmit = async () => {
+    const cleanCpf = cpf.replace(/\D/g, '')
+    if (!cleanCpf || cleanCpf.length < 11) {
+      setError('Informe o CPF do paciente.')
+      return
+    }
     if (!patientData.name.trim()) {
       setError('Informe o nome do paciente.')
       return
@@ -60,25 +115,42 @@ export default function AppointmentForm() {
     setError('')
 
     try {
-      // 1. Create the patient
-      const { data: patient, error: patientError } = await supabase
-        .from('patients')
-        .insert({
-          full_name: patientData.name.trim(),
-          date_of_birth: patientData.dob || null,
-          phone: patientData.phone || null,
-          address: patientData.address || null,
-        })
-        .select('id')
-        .single()
+      let patientId = existingPatientId
 
-      if (patientError) throw patientError
+      if (patientId) {
+        // Update existing patient data
+        await supabase
+          .from('patients')
+          .update({
+            full_name: patientData.name.trim(),
+            date_of_birth: patientData.dob || null,
+            phone: patientData.phone || null,
+            address: patientData.address || null,
+          })
+          .eq('id', patientId)
+      } else {
+        // Create new patient with CPF
+        const { data: patient, error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            full_name: patientData.name.trim(),
+            cpf: cleanCpf,
+            date_of_birth: patientData.dob || null,
+            phone: patientData.phone || null,
+            address: patientData.address || null,
+          })
+          .select('id')
+          .single()
 
-      // 2. Create the appointment
+        if (patientError) throw patientError
+        patientId = patient.id
+      }
+
+      // Create the appointment
       const { error: appointmentError } = await supabase
         .from('appointments')
         .insert({
-          patient_id: patient.id,
+          patient_id: patientId,
           type: appointmentType,
           scheduled_at: new Date(scheduledAt).toISOString(),
           notes: notes || null,
@@ -115,6 +187,24 @@ export default function AppointmentForm() {
         <h3 className="text-lg font-bold text-[#1A1514] mb-4 border-b border-[#A58079]/10 pb-2">1. Dados do Paciente</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2 md:col-span-2">
+            <label className="text-sm font-semibold text-[#2D2422] flex items-center gap-2">
+              CPF *
+              {isSearchingCpf && <span className="text-xs text-[#A58079] animate-pulse flex items-center gap-1"><Search className="w-3 h-3" /> Buscando na base...</span>}
+              {cpfFound && <span className="text-xs text-green-600 font-bold">✓ Paciente encontrado!</span>}
+            </label>
+            <input 
+              type="text" 
+              className={`w-full bg-[#F9F7F6] border rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans ${cpfFound ? 'border-green-400 bg-green-50/50' : 'border-[#A58079]/20'}`}
+              placeholder="000.000.000-00" 
+              value={cpf}
+              onChange={e => handleCpfChange(e.target.value)}
+              onBlur={handleCpfBlur}
+              maxLength={14}
+              required
+            />
+          </div>
+
           <div className="space-y-2 md:col-span-2">
             <label className="text-sm font-semibold text-[#2D2422]">Nome Completo *</label>
             <input 

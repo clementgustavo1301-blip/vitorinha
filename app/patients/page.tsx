@@ -41,7 +41,7 @@ export default function PatientsPage() {
           href="/appointments/new" 
           className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-6 py-2 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-2"
         >
-          <Plus className="h-4 w-4" /> Novo Agendamento
+          <Plus className="h-4 w-4" /> Novo Atendimento
         </Link>
       </div>
 

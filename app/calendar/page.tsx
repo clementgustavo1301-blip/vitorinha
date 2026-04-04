@@ -1,8 +1,37 @@
+"use client"
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { Loader2, Calendar, Clock } from 'lucide-react'
 import HybridCalendar from '@/components/calendar/HybridCalendar'
 import AppointmentBadge from '@/components/calendar/AppointmentBadge'
-import Link from 'next/link'
 
 export default function CalendarPage() {
+  const supabase = createClient()
+  const [appointments, setAppointments] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      setLoading(true)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*, patients (full_name, address)')
+        .gte('scheduled_at', today.toISOString())
+        .lt('scheduled_at', tomorrow.toISOString())
+        .order('scheduled_at', { ascending: true })
+
+      if (!error) setAppointments(data || [])
+      setLoading(false)
+    }
+    fetchAppointments()
+  }, [supabase])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -25,38 +54,44 @@ export default function CalendarPage() {
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
           <h2 className="text-lg font-bold text-[#1A1514] mb-6">Atendimentos do Dia</h2>
           
-          <div className="space-y-4">
-            {/* Example List */}
-            <div className="p-4 rounded-2xl bg-[#F9F7F6] border border-[#A58079]/20 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between transition hover:shadow-md cursor-pointer">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#A58079]/10 flex flex-col items-center justify-center font-bold text-[#A58079] border border-[#A58079]/20">
-                  <span className="text-sm">14:00</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[#2D2422]">Maria Silva</h3>
-                  <p className="text-sm text-[#6B5C59] mt-1">Primeira Consulta - Úlcera</p>
-                </div>
-              </div>
-              <AppointmentBadge type="clinic" />
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 text-[#A58079] animate-spin" />
             </div>
+          ) : appointments.length === 0 ? (
+            <div className="text-center py-12">
+              <Clock className="w-12 h-12 text-[#A58079]/20 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-[#2D2422]">Nenhum atendimento hoje</h3>
+              <p className="text-[#6B5C59] mt-2">Agende um novo atendimento para começar.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {appointments.map((appt) => {
+                const time = new Date(appt.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                const patientName = appt.patients?.full_name || 'Paciente'
+                const initials = patientName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                const isHome = appt.type === 'home'
 
-            <div className="p-4 rounded-2xl bg-[#F9F7F6] border border-[#2D2422]/20 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between transition hover:shadow-md cursor-pointer">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[#2D2422]/10 flex flex-col items-center justify-center font-bold text-[#2D2422] border border-[#2D2422]/20">
-                  <span className="text-sm">16:30</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-[#2D2422]">João Oliveira</h3>
-                  <p className="text-sm text-[#6B5C59] mt-1">Troca de curativo</p>
-                  <p className="text-xs text-[#6B5C59] flex items-center gap-1 mt-1">
-                    <span className="truncate max-w-[200px] inline-block">R. das Flores, 123</span>
-                  </p>
-                </div>
-              </div>
-              <AppointmentBadge type="home" />
+                return (
+                  <div key={appt.id} className={`p-4 rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between transition hover:shadow-md`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex flex-col items-center justify-center font-bold border`}>
+                        <span className="text-sm">{time}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-[#2D2422]">{patientName}</h3>
+                        {appt.notes && <p className="text-sm text-[#6B5C59] mt-1">{appt.notes}</p>}
+                        {isHome && appt.patients?.address && (
+                          <p className="text-xs text-[#6B5C59] mt-1 truncate max-w-[250px]">{appt.patients.address}</p>
+                        )}
+                      </div>
+                    </div>
+                    <AppointmentBadge type={appt.type} />
+                  </div>
+                )
+              })}
             </div>
-            
-          </div>
+          )}
         </div>
       </div>
     </div>

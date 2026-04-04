@@ -23,6 +23,8 @@ export default function WoundRecordForm({ patientId, appointmentId, onSaved }: W
   const [location, setLocation] = useState('')
   const [tissueTypes, setTissueTypes] = useState<string[]>([])
   const [exudateTypes, setExudateTypes] = useState<string[]>([])
+  const [exudateVolume, setExudateVolume] = useState('')
+  const [odor, setOdor] = useState('')
   const [painLevel, setPainLevel] = useState<number>(5)
   const [treatment, setTreatment] = useState<string>('')
   const [observations, setObservations] = useState<string>('')
@@ -70,6 +72,8 @@ export default function WoundRecordForm({ patientId, appointmentId, onSaved }: W
       if (dbError) throw dbError
 
       setSuccess(true)
+      setExudateVolume('')
+      setOdor('')
       if (onSaved) onSaved()
     } catch (err: any) {
       console.error('Erro ao salvar prontuário:', err)
@@ -120,6 +124,32 @@ export default function WoundRecordForm({ patientId, appointmentId, onSaved }: W
             {['Seroso', 'Sanguinolento', 'Purulento', 'Ausente'].map(type => (
               <label key={type} className={`flex items-center gap-2 cursor-pointer p-3 rounded-xl border transition-colors ${exudateTypes.includes(type) ? 'border-[#A58079] bg-[#A58079]/10' : 'border-[#A58079]/10 bg-[#F9F7F6] hover:bg-white'}`}>
                 <input type="checkbox" className="text-[#A58079] focus:ring-[#A58079] h-4 w-4 rounded border-[#A58079]/30" checked={exudateTypes.includes(type)} onChange={() => toggleExudate(type)} />
+                <span className="text-sm text-[#2D2422] font-medium">{type}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-[#2D2422]">Volume do Exsudato</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2">
+            {['Pouco', 'Médio', 'Muito'].map(type => (
+              <label key={type} className={`flex items-center gap-2 cursor-pointer p-3 rounded-xl border transition-colors ${exudateVolume === type ? 'border-[#A58079] bg-[#A58079]/10' : 'border-[#A58079]/10 bg-[#F9F7F6] hover:bg-white'}`}>
+                <input type="radio" name="volumeExsudato" value={type} className="text-[#A58079] focus:ring-[#A58079] h-4 w-4 rounded-full border-[#A58079]/30 cursor-pointer" checked={exudateVolume === type} onChange={() => setExudateVolume(type)} />
+                <span className="text-sm text-[#2D2422] font-medium">{type}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-[#2D2422]">Odor da Ferida</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+            {['Ausente', 'Leve', 'Forte', 'Intenso'].map(type => (
+              <label key={type} className={`flex items-center gap-2 cursor-pointer p-3 rounded-xl border transition-colors ${odor === type ? 'border-[#A58079] bg-[#A58079]/10' : 'border-[#A58079]/10 bg-[#F9F7F6] hover:bg-white'}`}>
+                <input type="radio" name="odorFerida" value={type} className="text-[#A58079] focus:ring-[#A58079] h-4 w-4 rounded-full border-[#A58079]/30 cursor-pointer" checked={odor === type} onChange={() => setOdor(type)} />
                 <span className="text-sm text-[#2D2422] font-medium">{type}</span>
               </label>
             ))}

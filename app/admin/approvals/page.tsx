@@ -8,9 +8,26 @@ export default function AdminApprovalsPage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'active'>('pending')
   const [requests, setRequests] = useState<any[]>([])
   const [activeRoles, setActiveRoles] = useState<any[]>([])
+  const [userNames, setUserNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const { user, role, clinicId } = useRole()
   const supabase = createClient()
+
+  const fetchUserNames = async (userIds: string[]) => {
+    const uniqueIds = [...new Set(userIds)]
+    if (uniqueIds.length === 0) return {}
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', uniqueIds)
+
+    const names: Record<string, string> = {}
+    for (const profile of data || []) {
+      names[profile.id] = profile.full_name || 'Sem nome'
+    }
+    return names
+  }
 
   useEffect(() => {
     if (role !== 'admin') return
@@ -28,18 +45,31 @@ export default function AdminApprovalsPage() {
           .select('id, role, created_at, user_id, clinic_id, coren, clinics (name)')
       ])
 
-      setRequests(pendingRes.data || [])
-      setActiveRoles(activeRes.data || [])
+      const allRequests = pendingRes.data || []
+      const allRoles = activeRes.data || []
+
+      setRequests(allRequests)
+      setActiveRoles(allRoles)
+
+      // Fetch user names for all user_ids
+      const allUserIds = [
+        ...allRequests.map((r: any) => r.user_id),
+        ...allRoles.map((r: any) => r.user_id)
+      ]
+      const names = await fetchUserNames(allUserIds)
+      setUserNames(names)
+
       setLoading(false)
     }
 
     fetchData()
   }, [role, clinicId, supabase])
 
+  const getUserName = (userId: string) => userNames[userId] || `Usuário ${userId.slice(0, 5)}...`
+
   const handleAction = async (requestId: string, status: 'approved' | 'rejected', user_id: string, clinic_id: string, roleRequested: string, coren: string | null) => {
     try {
       if (status === 'approved') {
-        // 1. Add to user_clinic_roles
         const { error: roleError } = await supabase.from('user_clinic_roles').insert({
           user_id,
           clinic_id,
@@ -49,7 +79,6 @@ export default function AdminApprovalsPage() {
         if (roleError) throw roleError
       }
 
-      // 2. Update request status
       const { error: reqError } = await supabase
         .from('role_requests')
         .update({ status })
@@ -60,7 +89,6 @@ export default function AdminApprovalsPage() {
       setRequests(requests.filter(r => r.id !== requestId))
 
       if (status === 'approved') {
-        // Refresh active roles
         const { data } = await supabase.from('user_clinic_roles').select('id, role, created_at, user_id, clinic_id, coren, clinics (name)')
         setActiveRoles(data || [])
       }
@@ -152,7 +180,8 @@ export default function AdminApprovalsPage() {
                     <User className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-[#2D2422]">Solicitação para {req.role === 'admin' ? 'Administrador' : req.role === 'nurse' ? 'Enfermeiro(a)' : 'Recepção'}</h3>
+                    <h3 className="text-lg font-bold text-[#2D2422]">{getUserName(req.user_id)}</h3>
+                    <p className="text-sm text-[#6B5C59]">Solicita: <span className="font-bold text-[#A58079]">{req.role === 'admin' ? 'Gestor' : req.role === 'nurse' ? 'Enfermeiro(a)' : 'Recepção'}</span></p>
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       <span className="flex items-center gap-1 px-3 py-1 bg-[#F9F7F6] rounded-full text-xs font-bold text-[#6B5C59]">
                         <Building2 className="w-3 h-3" /> {req.clinics?.name}
@@ -162,7 +191,6 @@ export default function AdminApprovalsPage() {
                           COREN: {req.coren}
                         </span>
                       )}
-                      <span className="text-xs text-[#6B5C59]">Usuário ID: {req.user_id.slice(0, 5)}...</span>
                     </div>
                   </div>
                 </div>
@@ -186,7 +214,6 @@ export default function AdminApprovalsPage() {
           </div>
         )
       ) : (
-        /* ACTIVE ROLES TAB */
         activeRoles.length === 0 ? (
           <div className="bg-white rounded-[40px] p-16 text-center border border-[#A58079]/10 shadow-sm">
             <User className="w-12 h-12 text-[#A58079]/20 mx-auto mb-4" />
@@ -214,12 +241,13 @@ export default function AdminApprovalsPage() {
                   </span>
                 </div>
                 
-                <h3 className="text-lg font-bold text-[#2D2422] mb-1">
+                <h3 className="text-lg font-bold text-[#2D2422] mb-1">{getUserName(roleRecord.user_id)}</h3>
+                <p className="text-sm text-[#A58079] font-bold mb-2">
                   {roleRecord.role === 'admin' ? 'Gestor' : roleRecord.role === 'nurse' ? 'Enfermeiro(a)' : 'Recepção'}
-                </h3>
+                </p>
                 
                 <div className="space-y-2 mb-4 flex-1">
-                  <p className="text-[#A58079] font-medium text-sm flex items-center gap-1">
+                  <p className="text-[#6B5C59] font-medium text-sm flex items-center gap-1">
                     <Building2 className="w-4 h-4" /> {roleRecord.clinics?.name}
                   </p>
                   {roleRecord.coren && (
@@ -227,9 +255,6 @@ export default function AdminApprovalsPage() {
                       COREN: {roleRecord.coren}
                     </p>
                   )}
-                  <p className="text-[11px] text-[#6B5C59]/70 pt-2 border-t border-[#A58079]/10">
-                    Usuário ID: {roleRecord.user_id.slice(0, 8)}...
-                  </p>
                 </div>
               </div>
             ))}

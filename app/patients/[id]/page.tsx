@@ -6,6 +6,7 @@ import { ArrowLeft, Edit, CalendarPlus, Activity, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import WoundRecordForm from '@/components/wound-records/WoundRecordForm'
 import WoundTimeline from '@/components/wound-records/WoundTimeline'
+import ImageUploader from '@/components/wound-records/ImageUploader'
 
 export default function PatientDetailPage() {
   const params = useParams()
@@ -153,9 +154,15 @@ export default function PatientDetailPage() {
         )}
         
         {activeTab === 'nova-evolucao' && (
-          <div className="bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
-            <h2 className="text-lg font-bold text-[#1A1514] mb-6 border-b border-[#A58079]/10 pb-4">Anamnese da Ferida (Tratamento)</h2>
-            <WoundRecordForm patientId={patientId} onSaved={() => setActiveTab('timeline')} />
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
+              <h2 className="text-lg font-bold text-[#1A1514] mb-6 border-b border-[#A58079]/10 pb-4">Anamnese da Ferida (Tratamento)</h2>
+              <WoundRecordForm patientId={patientId} onSaved={() => setActiveTab('timeline')} />
+            </div>
+            <div className="bg-white rounded-3xl p-6 h-fit sticky top-6 border border-[#A58079]/10 shadow-sm">
+              <h2 className="text-lg font-bold text-[#1A1514] mb-6 border-b border-[#A58079]/10 pb-4">Registro Fotográfico</h2>
+              <ImageUploader />
+            </div>
           </div>
         )}
       </div>

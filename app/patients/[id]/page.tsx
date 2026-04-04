@@ -1,13 +1,56 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Edit, CalendarPlus, Activity } from 'lucide-react'
+import { ArrowLeft, Edit, CalendarPlus, Activity, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import WoundRecordForm from '@/components/wound-records/WoundRecordForm'
-import ImageUploader from '@/components/wound-records/ImageUploader'
 import WoundTimeline from '@/components/wound-records/WoundTimeline'
 
 export default function PatientDetailPage() {
+  const params = useParams()
+  const patientId = params.id as string
+  const supabase = createClient()
+
+  const [patient, setPatient] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'historico' | 'timeline' | 'nova-evolucao'>('historico')
+
+  useEffect(() => {
+    const fetchPatient = async () => {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('id', patientId)
+        .single()
+
+      if (!error && data) setPatient(data)
+      setLoading(false)
+    }
+    if (patientId) fetchPatient()
+  }, [patientId, supabase])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="w-8 h-8 text-[#A58079] animate-spin" />
+      </div>
+    )
+  }
+
+  if (!patient) {
+    return (
+      <div className="text-center py-20">
+        <h2 className="text-xl font-bold text-[#2D2422]">Paciente não encontrado</h2>
+        <Link href="/patients" className="text-[#A58079] mt-4 inline-block hover:underline">Voltar para Pacientes</Link>
+      </div>
+    )
+  }
+
+  const initials = patient.full_name
+    ? patient.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+    : '??'
 
   return (
     <div className="space-y-6 pb-20">
@@ -16,32 +59,29 @@ export default function PatientDetailPage() {
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Link>
         <div className="flex gap-2">
-          <button className="border border-[#A58079] text-[#A58079] hover:bg-[#A58079] hover:text-white rounded-full px-6 py-2 text-sm flex items-center gap-2 transition-all">
-            <Edit className="h-4 w-4" /> Editar
-          </button>
-          <button className="bg-[#A58079] hover:bg-[#8C6A63] text-white rounded-full px-6 py-2 text-sm flex items-center gap-2 transition-all shadow-md">
+          <Link href={`/appointments/new`} className="bg-[#A58079] hover:bg-[#8C6A63] text-white rounded-full px-6 py-2 text-sm flex items-center gap-2 transition-all shadow-md">
             <CalendarPlus className="h-4 w-4" /> Agendar
-          </button>
+          </Link>
         </div>
       </div>
 
       <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#A58079]/10 shadow-sm">
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
           <div className="w-20 h-20 rounded-full bg-[#A58079]/10 flex flex-shrink-0 items-center justify-center font-bold text-[#A58079] text-3xl shadow-inner">
-            MS
+            {initials}
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-[#1A1514]">Maria Silva</h1>
+            <h1 className="text-2xl font-bold text-[#1A1514]">{patient.full_name}</h1>
             <div className="flex flex-wrap gap-4 mt-2 text-sm text-[#6B5C59] font-medium">
-              <span>Idade: 68 anos</span>
-              <span>•</span>
-              <span>Telefone: (11) 98765-4321</span>
-              <span>•</span>
-              <span>Rua das Acácias, 123 - Centro</span>
+              {patient.date_of_birth && <span>Nascimento: {new Date(patient.date_of_birth).toLocaleDateString('pt-BR')}</span>}
+              {patient.phone && <><span>•</span><span>Tel: {patient.phone}</span></>}
+              {patient.address && <><span>•</span><span>{patient.address}</span></>}
             </div>
-            <p className="mt-4 text-sm bg-[#F9F7F6] p-3 rounded-2xl border border-[#A58079]/10 text-[#2D2422]">
-              <span className="font-semibold text-[#A58079]">Observações:</span> Diabetes Tipo 2. Alérgica a Penicilina. Cuidado extra com desbridamento.
-            </p>
+            {patient.notes && (
+              <p className="mt-4 text-sm bg-[#F9F7F6] p-3 rounded-2xl border border-[#A58079]/10 text-[#2D2422]">
+                <span className="font-semibold text-[#A58079]">Observações:</span> {patient.notes}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -113,15 +153,9 @@ export default function PatientDetailPage() {
         )}
         
         {activeTab === 'nova-evolucao' && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2 bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
-              <h2 className="text-lg font-bold text-[#1A1514] mb-6 border-b border-[#A58079]/10 pb-4">Anamnese da Ferida (Tratamento)</h2>
-              <WoundRecordForm />
-            </div>
-            <div className="bg-white rounded-3xl p-6 h-fit sticky top-6 border border-[#A58079]/10 shadow-sm">
-              <h2 className="text-lg font-bold text-[#1A1514] mb-6 border-b border-[#A58079]/10 pb-4">Registro Fotográfico</h2>
-              <ImageUploader />
-            </div>
+          <div className="bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
+            <h2 className="text-lg font-bold text-[#1A1514] mb-6 border-b border-[#A58079]/10 pb-4">Anamnese da Ferida (Tratamento)</h2>
+            <WoundRecordForm patientId={patientId} onSaved={() => setActiveTab('timeline')} />
           </div>
         )}
       </div>

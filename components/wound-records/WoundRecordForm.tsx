@@ -22,6 +22,9 @@ export default function WoundRecordForm({ patientId, appointmentId, initialData,
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [docFiles, setDocFiles] = useState<File[]>([])
+  
   const [location, setLocation] = useState(initialData?.location || '')
   const [tissueTypes, setTissueTypes] = useState<string[]>(initialData?.tissue_type ? initialData.tissue_type.split(', ') : [])
   const [exudateTypes, setExudateTypes] = useState<string[]>(initialData?.exudate ? initialData.exudate.split(', ') : [])
@@ -69,32 +72,63 @@ export default function WoundRecordForm({ patientId, appointmentId, initialData,
         notes: observations || null,
       }
 
+      let recordId = initialData?.id;
       let dbError;
       if (initialData?.id) {
-        // Only include IDs for new records
+        // Update
         const { error } = await supabase
           .from('wound_records')
           .update(recordData)
           .eq('id', initialData.id)
         dbError = error
       } else {
-        // Include patient and appointment IDs for new records
+        // Insert
         const insertData = {
           ...recordData,
           patient_id: patientId,
           appointment_id: appointmentId || null,
         }
-        const { error } = await supabase
+        const { data: newRecord, error } = await supabase
           .from('wound_records')
           .insert(insertData)
+          .select('id')
+          .single()
         dbError = error
+        if (newRecord) recordId = newRecord.id
       }
 
       if (dbError) throw dbError
 
+      // HANDLE FILE UPLOADS
+      const allFiles = [...imageFiles, ...docFiles]
+      if (allFiles.length > 0 && recordId) {
+        // Iterate files and upload
+        for (const file of allFiles) {
+          const fileExt = file.name.split('.').pop()
+          const fileName = `${patientId}/${recordId}/${Math.random().toString(36).substring(2)}.${fileExt}`
+          
+          const { error: uploadError } = await supabase.storage
+            .from('wound-images')
+            .upload(fileName, file)
+            
+          if (!uploadError) {
+            // Save to wound_images table
+            await supabase.from('wound_images').insert({
+              wound_record_id: recordId,
+              storage_path: fileName,
+              caption: 'Foto adicionada durante o atendimento'
+            })
+          } else {
+             console.error("Upload error:", uploadError)
+          }
+        }
+      }
+
       setSuccess(true)
       setExudateVolume('')
       setOdor('')
+      setImageFiles([])
+      setDocFiles([])
       if (onSaved) onSaved()
     } catch (err: any) {
       console.error('Erro ao salvar prontuário:', err)
@@ -210,16 +244,92 @@ export default function WoundRecordForm({ patientId, appointmentId, initialData,
         </div>
       </div>
 
-      <div className="space-y-2 pt-4 border-t border-[#A58079]/10">
-        <label className="text-sm font-semibold text-[#2D2422]">Anexar Documentos / Exames</label>
-        <div className="border-2 border-dashed border-[#A58079]/30 rounded-2xl p-6 flex flex-col items-center justify-center bg-[#F9F7F6] hover:bg-[#A58079]/5 transition-colors cursor-pointer group">
-          <input type="file" className="hidden" id="fileUpload" multiple />
-          <label htmlFor="fileUpload" className="flex flex-col items-center cursor-pointer w-full">
-            <svg className="w-8 h-8 text-[#A58079] mb-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <span className="text-sm font-medium text-[#2D2422]">Clique para fazer upload</span>
-            <span className="text-xs text-[#6B5C59] mt-1">Imagens, PDFs e Exames (Max 10MB)</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#A58079]/10">
+        
+        {/* IMAGES SECTION */}
+        <div className="space-y-4 bg-white/60 p-4 rounded-3xl border border-[#A58079]/10">
+          <label className="text-sm font-semibold text-[#2D2422]">Evidências Fotográficas</label>
+          
+          {imageFiles.length > 0 && (
+             <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+               {imageFiles.map((f, i) => (
+                  <div key={i} className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden shadow-sm group">
+                    <img src={URL.createObjectURL(f)} alt="preview" className="w-full h-full object-cover" />
+                    <button 
+                      type="button"
+                      onClick={() => setImageFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="absolute top-1 right-1 bg-white/80 p-1 rounded-full text-red-500 hover:bg-white shadow"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+               ))}
+             </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="border-2 border-dashed border-[#A58079]/30 rounded-2xl p-4 flex flex-col items-center justify-center bg-[#F9F7F6] hover:bg-[#A58079]/5 transition-colors cursor-pointer group text-center h-28">
+              <input 
+                type="file" 
+                className="hidden" 
+                multiple 
+                accept="image/*"
+                capture="environment"
+                onChange={e => e.target.files && setImageFiles(prev => [...prev, ...Array.from(e.target.files!)])}
+              />
+              <svg className="w-6 h-6 text-[#A58079] mb-1 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <span className="text-xs font-medium text-[#2D2422]">Tirar Foto</span>
+            </label>
+            <label className="border-2 border-dashed border-[#A58079]/30 rounded-2xl p-4 flex flex-col items-center justify-center bg-[#F9F7F6] hover:bg-[#A58079]/5 transition-colors cursor-pointer group text-center h-28">
+              <input 
+                type="file" 
+                className="hidden" 
+                multiple 
+                accept="image/*"
+                onChange={e => e.target.files && setImageFiles(prev => [...prev, ...Array.from(e.target.files!)])}
+              />
+              <svg className="w-6 h-6 text-[#A58079] mb-1 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <span className="text-xs font-medium text-[#2D2422]">Galeria</span>
+            </label>
+          </div>
+        </div>
+
+        {/* DOCUMENTS SECTION */}
+        <div className="space-y-4 bg-white/60 p-4 rounded-3xl border border-[#A58079]/10">
+          <label className="text-sm font-semibold text-[#2D2422]">Exames e Documentos</label>
+          
+          {docFiles.length > 0 && (
+             <div className="flex flex-col gap-2">
+               {docFiles.map((f, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-[#F9F7F6] border border-[#A58079]/10">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <div className="p-1.5 bg-[#A58079]/10 rounded-lg shrink-0">
+                        <svg className="w-4 h-4 text-[#A58079]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                      </div>
+                      <span className="text-xs text-[#2D2422] font-medium truncate">{f.name}</span>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setDocFiles(prev => prev.filter((_, idx) => idx !== i))}
+                      className="p-1 rounded-full text-[#A58079] hover:bg-[#A58079]/10"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
+               ))}
+             </div>
+          )}
+
+          <label className="border-2 border-dashed border-[#A58079]/30 rounded-2xl p-4 flex flex-col items-center justify-center bg-[#F9F7F6] hover:bg-[#A58079]/5 transition-colors cursor-pointer group text-center h-28">
+            <input 
+              type="file" 
+              className="hidden" 
+              multiple 
+              accept=".pdf,.doc,.docx,.xls,.xlsx"
+              onChange={e => e.target.files && setDocFiles(prev => [...prev, ...Array.from(e.target.files!)])}
+            />
+            <svg className="w-6 h-6 text-[#A58079] mb-1 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            <span className="text-xs font-medium text-[#2D2422]">Adicionar Documento / PDF</span>
           </label>
         </div>
       </div>

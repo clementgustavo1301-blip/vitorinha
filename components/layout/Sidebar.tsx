@@ -13,8 +13,7 @@ export default function Sidebar() {
   const allNavItems = [
     { name: 'Dashboard', href: '/', icon: Home, roles: ['nurse', 'receptionist', 'admin'] },
     { name: 'Agenda Híbrida', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
-    { name: 'Pacientes', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
-    { name: 'Prontuários', href: '/wound-records', icon: Activity, roles: ['nurse', 'admin'] },
+    { name: 'Pacientes & Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
     { name: 'Homologações', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
   ]
   const navItems = allNavItems.filter(item => item.roles.includes(role))

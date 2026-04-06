@@ -91,18 +91,22 @@ export default function Dashboard() {
                     const isHome = appt.type === 'home'
 
                     return (
-                      <div key={appt.id} className={`p-4 rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between`}>
+                      <Link 
+                        href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                        key={appt.id} 
+                        className={`p-4 rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between group transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer block`}
+                      >
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex items-center justify-center font-bold border`}>{initials}</div>
+                          <div className={`w-12 h-12 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex items-center justify-center font-bold border group-hover:scale-105 transition`}>{initials}</div>
                           <div>
-                            <h3 className="font-semibold text-[#2D2422]">{name}</h3>
+                            <h3 className="font-semibold text-[#2D2422] group-hover:text-[#A58079] transition-colors">{name}</h3>
                             <p className="text-sm text-[#6B5C59]">{appt.notes || (isHome ? 'Domiciliar' : 'Clínica')} ({date} às {time})</p>
                           </div>
                         </div>
                         <span className={`inline-block px-4 py-1.5 rounded-full text-xs font-semibold ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} border`}>
                           {isHome ? 'Domiciliar' : 'Clínica'}
                         </span>
-                      </div>
+                      </Link>
                     )
                   })}
                 </div>

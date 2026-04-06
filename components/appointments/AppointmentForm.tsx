@@ -116,10 +116,22 @@ export default function AppointmentForm({ mode = 'schedule' }: { mode?: 'schedul
 
     try {
       let patientId = existingPatientId
+      if (!patientId) {
+        // Final safety check by CPF before creating new
+        const { data: cpfLookup } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('cpf', cleanCpf)
+          .maybeSingle()
+        
+        if (cpfLookup) {
+          patientId = cpfLookup.id
+        }
+      }
 
       if (patientId) {
-        // Update existing patient data
-        await supabase
+        // Update existing patient data to keep it fresh
+        const { error: updateError } = await supabase
           .from('patients')
           .update({
             full_name: patientData.name.trim(),
@@ -128,6 +140,8 @@ export default function AppointmentForm({ mode = 'schedule' }: { mode?: 'schedul
             address: patientData.address || null,
           })
           .eq('id', patientId)
+        
+        if (updateError) throw updateError
       } else {
         // Create new patient with CPF
         const { data: patient, error: patientError } = await supabase
@@ -217,7 +231,7 @@ export default function AppointmentForm({ mode = 'schedule' }: { mode?: 'schedul
             <label className="text-sm font-semibold text-[#2D2422]">Nome Completo *</label>
             <input 
               type="text" 
-              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
+              className={`w-full bg-[#F9F7F6] border ${cpfFound ? 'border-green-200 ring-4 ring-green-50' : 'border-[#A58079]/20'} rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans`} 
               placeholder="Ex: Maria da Silva" 
               value={patientData.name}
               onChange={e => setPatientData({...patientData, name: e.target.value})}

@@ -82,13 +82,17 @@ export default function CalendarPage() {
                 const isHome = appt.type === 'home'
 
                 return (
-                  <div key={appt.id} className={`p-4 rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between transition hover:shadow-md`}>
+                  <Link 
+                    href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                    key={appt.id} 
+                    className={`p-4 rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer block group`}
+                  >
                     <div className="flex items-center gap-4">
-                      <div className={`w-14 h-14 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex flex-col items-center justify-center font-bold border`}>
+                      <div className={`w-14 h-14 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex flex-col items-center justify-center font-bold border transition group-hover:scale-105`}>
                         <span className="text-sm">{time}</span>
                       </div>
                       <div>
-                        <h3 className="font-semibold text-[#2D2422]">{patientName}</h3>
+                        <h3 className="font-semibold text-[#2D2422] group-hover:text-[#A58079] transition-colors">{patientName}</h3>
                         {appt.notes && <p className="text-sm text-[#6B5C59] mt-1">{appt.notes}</p>}
                         {isHome && appt.patients?.address && (
                           <p className="text-xs text-[#6B5C59] mt-1 truncate max-w-[250px]">{appt.patients.address}</p>
@@ -96,7 +100,7 @@ export default function CalendarPage() {
                       </div>
                     </div>
                     <AppointmentBadge type={appt.type} />
-                  </div>
+                  </Link>
                 )
               })}
             </div>

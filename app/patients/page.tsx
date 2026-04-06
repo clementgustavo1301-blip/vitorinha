@@ -34,8 +34,8 @@ export default function PatientsPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#1A1514]">Pacientes</h1>
-          <p className="text-[#6B5C59] mt-1">Gerencie os históricos e anamneses.</p>
+          <h1 className="text-2xl font-bold text-[#1A1514]">Pacientes e Prontuários</h1>
+          <p className="text-[#6B5C59] mt-1">Gerencie os históricos de saúde e evoluções clínicas.</p>
         </div>
         <Link 
           href="/attendances/new" 

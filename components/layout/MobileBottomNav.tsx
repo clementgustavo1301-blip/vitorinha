@@ -1,7 +1,7 @@
 "use client"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, Users, Activity, ShieldCheck } from 'lucide-react'
+import { Home, Calendar, Users, Activity, ShieldCheck, ArrowLeftRight } from 'lucide-react'
 import { useRole } from '@/components/layout/RoleContext'
 
 export default function MobileBottomNav() {
@@ -9,9 +9,9 @@ export default function MobileBottomNav() {
   const { role } = useRole()
 
   const allNavItems = [
-    { name: 'Início', href: '/', icon: Home, roles: ['nurse', 'receptionist', 'admin'] },
+    { name: 'Dashboard', href: '/', icon: Home, roles: ['nurse', 'receptionist', 'admin'] },
     { name: 'Agenda', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
-    { name: 'Pacientes', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
+    { name: 'Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
     { name: 'Evoluções', href: '/wound-records', icon: Activity, roles: ['nurse', 'admin'] },
     { name: 'Admin', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
   ]
@@ -49,6 +49,17 @@ export default function MobileBottomNav() {
               </Link>
             )
           })}
+          
+          <Link
+            href="/role-selection"
+            className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all duration-300 min-w-[56px] text-[#E8DCDA]/60 active:scale-95"
+            title="Trocar Vínculo"
+          >
+            <div className="p-1.5 rounded-xl transition-all duration-300">
+              <ArrowLeftRight className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] font-semibold tracking-wide">Trocar</span>
+          </Link>
         </div>
       </div>
     </nav>

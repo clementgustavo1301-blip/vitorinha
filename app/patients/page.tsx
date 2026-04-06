@@ -38,7 +38,7 @@ export default function PatientsPage() {
           <p className="text-[#6B5C59] mt-1">Gerencie os históricos e anamneses.</p>
         </div>
         <Link 
-          href="/appointments/new" 
+          href="/attendances/new" 
           className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-6 py-2 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-2"
         >
           <Plus className="h-4 w-4" /> Novo Atendimento

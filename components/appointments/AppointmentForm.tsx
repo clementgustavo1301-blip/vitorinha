@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Check, Loader2, Search } from 'lucide-react'
 
-export default function AppointmentForm() {
+export default function AppointmentForm({ mode = 'schedule' }: { mode?: 'schedule' | 'immediate' }) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -106,7 +106,7 @@ export default function AppointmentForm() {
       setError('Informe o nome do paciente.')
       return
     }
-    if (!scheduledAt) {
+    if (mode === 'schedule' && !scheduledAt) {
       setError('Selecione a data e hora do agendamento.')
       return
     }
@@ -152,15 +152,19 @@ export default function AppointmentForm() {
         .insert({
           patient_id: patientId,
           type: appointmentType,
-          scheduled_at: new Date(scheduledAt).toISOString(),
+          scheduled_at: mode === 'schedule' ? new Date(scheduledAt).toISOString() : new Date().toISOString(),
           notes: notes || null,
-          status: 'scheduled'
+          status: mode === 'schedule' ? 'scheduled' : 'completed'
         })
 
       if (appointmentError) throw appointmentError
 
       setSuccess(true)
-      setTimeout(() => router.push('/calendar'), 1500)
+      if (mode === 'immediate') {
+        setTimeout(() => router.push(`/patients/${patientId}?new=true`), 1000)
+      } else {
+        setTimeout(() => router.push('/calendar'), 1500)
+      }
     } catch (err: any) {
       console.error('Erro ao salvar:', err)
       setError(err.message || 'Erro ao salvar. Tente novamente.')
@@ -175,8 +179,12 @@ export default function AppointmentForm() {
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
           <Check className="w-8 h-8 text-green-600" />
         </div>
-        <h2 className="text-xl font-bold text-[#2D2422]">Agendamento Salvo!</h2>
-        <p className="text-[#6B5C59]">Redirecionando para a agenda...</p>
+        <h2 className="text-xl font-bold text-[#2D2422]">
+          {mode === 'immediate' ? 'Atendimento Iniciado!' : 'Agendamento Salvo!'}
+        </h2>
+        <p className="text-[#6B5C59]">
+          {mode === 'immediate' ? 'Redirecionando para a linha do tempo...' : 'Redirecionando para a agenda...'}
+        </p>
       </div>
     )
   }
@@ -263,7 +271,9 @@ export default function AppointmentForm() {
       </div>
 
       <div className="bg-white p-6 rounded-3xl border border-[#A58079]/10 shadow-sm">
-        <h3 className="text-lg font-bold text-[#1A1514] mb-4 border-b border-[#A58079]/10 pb-2">2. Dados do Agendamento</h3>
+        <h3 className="text-lg font-bold text-[#1A1514] mb-4 border-b border-[#A58079]/10 pb-2">
+          {mode === 'immediate' ? '2. Dados do Atendimento' : '2. Dados do Agendamento'}
+        </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2 md:col-span-2">
@@ -280,16 +290,18 @@ export default function AppointmentForm() {
             </div>
           </div>
           
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Data e Hora *</label>
-            <input 
-              type="datetime-local" 
-              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
-              value={scheduledAt}
-              onChange={e => setScheduledAt(e.target.value)}
-              required
-            />
-          </div>
+          {mode === 'schedule' && (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-[#2D2422]">Data e Hora *</label>
+              <input 
+                type="datetime-local" 
+                className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
+                value={scheduledAt}
+                onChange={e => setScheduledAt(e.target.value)}
+                required
+              />
+            </div>
+          )}
         </div>
         
         <div className="space-y-2 mt-4">
@@ -323,7 +335,7 @@ export default function AppointmentForm() {
           className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-8 py-3 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {saving ? 'Salvando...' : 'Finalizar Cadastro e Agendar'}
+          {saving ? 'Registrando...' : mode === 'immediate' ? 'Iniciar Atendimento Agora' : 'Finalizar Cadastro e Agendar'}
         </button>
       </div>
     </form>

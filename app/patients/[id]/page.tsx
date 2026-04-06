@@ -1,8 +1,8 @@
 "use client"
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Edit, CalendarPlus, Activity, Loader2 } from 'lucide-react'
+import { ArrowLeft, Edit, CalendarPlus, Activity, Loader2, Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import WoundRecordForm from '@/components/wound-records/WoundRecordForm'
 import WoundTimeline from '@/components/wound-records/WoundTimeline'
@@ -10,12 +10,22 @@ import ImageUploader from '@/components/wound-records/ImageUploader'
 
 export default function PatientDetailPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const patientId = params.id as string
   const supabase = createClient()
 
   const [patient, setPatient] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'historico' | 'timeline' | 'nova-evolucao'>('historico')
+  const [activeTab, setActiveTab] = useState<'historico' | 'timeline' | 'nova-evolucao'>(
+    searchParams.get('new') === 'true' ? 'nova-evolucao' : 'historico'
+  )
+  const [healthHistory, setHealthHistory] = useState({
+    comorbidities: '',
+    allergies: '',
+    surgical_history: ''
+  })
+  const [savingHistory, setSavingHistory] = useState(false)
+  const [savedHistory, setSavedHistory] = useState(false)
 
   useEffect(() => {
     const fetchPatient = async () => {
@@ -26,11 +36,42 @@ export default function PatientDetailPage() {
         .eq('id', patientId)
         .single()
 
-      if (!error && data) setPatient(data)
+      if (!error && data) {
+        setPatient(data)
+        setHealthHistory({
+          comorbidities: data.comorbidities || '',
+          allergies: data.allergies || '',
+          surgical_history: data.surgical_history || ''
+        })
+      }
       setLoading(false)
     }
     if (patientId) fetchPatient()
   }, [patientId, supabase])
+
+  const handleSaveHealthHistory = async () => {
+    setSavingHistory(true)
+    setSavedHistory(false)
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          comorbidities: healthHistory.comorbidities,
+          allergies: healthHistory.allergies,
+          surgical_history: healthHistory.surgical_history
+        })
+        .eq('id', patientId)
+        
+      if (error) throw error
+      setSavedHistory(true)
+      setTimeout(() => setSavedHistory(false), 3000)
+    } catch (err: any) {
+      console.error('Erro ao salvar histórico:', err)
+      // We can fail silently or handle error in a non-popup way, but for now we remove the alert
+    } finally {
+      setSavingHistory(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -128,28 +169,71 @@ export default function PatientDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-[#2D2422]">Doenças de Base (Diabetes, Hipertensão, etc)</label>
-                <textarea className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans min-h-[100px]" placeholder="Relatar condições médicas..."></textarea>
+                <textarea 
+                  className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans min-h-[100px]" 
+                  placeholder="Relatar condições médicas..."
+                  value={healthHistory.comorbidities}
+                  onChange={(e) => setHealthHistory(prev => ({ ...prev, comorbidities: e.target.value }))}
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-[#2D2422]">Alergias</label>
-                <textarea className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans min-h-[100px]" placeholder="Medicamentos, látex, iodo..."></textarea>
+                <textarea 
+                  className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans min-h-[100px]" 
+                  placeholder="Medicamentos, látex, iodo..."
+                  value={healthHistory.allergies}
+                  onChange={(e) => setHealthHistory(prev => ({ ...prev, allergies: e.target.value }))}
+                />
               </div>
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-semibold text-[#2D2422]">Histórico Cirúrgico e Medicações em Uso</label>
-                <textarea className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans min-h-[100px]" placeholder="Cirurgias prévias e medicamentos contínuos..."></textarea>
+                <textarea 
+                  className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans min-h-[100px]" 
+                  placeholder="Cirurgias prévias e medicamentos contínuos..."
+                  value={healthHistory.surgical_history}
+                  onChange={(e) => setHealthHistory(prev => ({ ...prev, surgical_history: e.target.value }))}
+                />
               </div>
             </div>
             
             <div className="flex justify-end pt-4">
-              <button className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-8 py-3 rounded-full font-medium shadow-md transition-all">Salvar Histórico de Saúde</button>
+              <button 
+                onClick={handleSaveHealthHistory}
+                disabled={savingHistory || savedHistory}
+                className={`px-8 py-3 rounded-full font-medium shadow-md transition-all flex items-center gap-2 disabled:opacity-50 ${savedHistory ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-[#A58079] hover:bg-[#8C6A63] text-white'}`}
+              >
+                {savingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {savedHistory ? <Check className="w-4 h-4" /> : null}
+                {savingHistory ? 'Salvando...' : savedHistory ? 'Salvo com Sucesso!' : 'Salvar Histórico de Saúde'}
+              </button>
             </div>
           </div>
         )}
 
         {activeTab === 'timeline' && (
-          <div className="bg-white rounded-3xl p-6 md:p-10 border border-[#A58079]/10 shadow-sm">
-            <h2 className="text-xl font-bold text-[#1A1514] mb-8 text-center">Histórico Fotográfico e Clínico</h2>
-            <WoundTimeline />
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
+              <h2 className="text-lg font-bold text-[#1A1514] mb-4 border-b border-[#A58079]/10 pb-2">Resumo do Histórico de Saúde</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-[#F9F7F6] rounded-2xl border border-[#A58079]/5">
+                  <p className="text-[10px] uppercase font-bold text-[#A58079] mb-1">Comorbidades</p>
+                  <p className="text-sm text-[#2D2422]">{healthHistory.comorbidities || 'Não informado'}</p>
+                </div>
+                <div className="p-4 bg-[#F9F7F6] rounded-2xl border border-[#A58079]/5">
+                  <p className="text-[10px] uppercase font-bold text-[#A58079] mb-1">Alergias</p>
+                  <p className="text-sm text-[#2D2422] font-semibold text-red-600/80">{healthHistory.allergies || 'Nenhuma informada'}</p>
+                </div>
+                <div className="p-4 bg-[#F9F7F6] rounded-2xl border border-[#A58079]/5">
+                  <p className="text-[10px] uppercase font-bold text-[#A58079] mb-1">Cid / Cirurgias / Medicações</p>
+                  <p className="text-sm text-[#2D2422]">{healthHistory.surgical_history || 'Não informado'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 md:p-10 border border-[#A58079]/10 shadow-sm">
+              <h2 className="text-xl font-bold text-[#1A1514] mb-8 text-center">Evolução das Lesões</h2>
+              <WoundTimeline />
+            </div>
           </div>
         )}
         

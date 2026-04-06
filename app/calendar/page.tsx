@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, Calendar, Clock } from 'lucide-react'
@@ -10,27 +10,33 @@ export default function CalendarPage() {
   const supabase = createClient()
   const [appointments, setAppointments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
 
   useEffect(() => {
-    const fetchAppointments = async () => {
+      const fetchAppointments = async () => {
       setLoading(true)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
+      const targetDate = selectedDate || new Date()
+      const startOfDay = new Date(targetDate)
+      startOfDay.setHours(0, 0, 0, 0)
+      const endOfDay = new Date(targetDate)
+      endOfDay.setHours(23, 59, 59, 999)
 
       const { data, error } = await supabase
         .from('appointments')
         .select('*, patients (full_name, address)')
-        .gte('scheduled_at', today.toISOString())
-        .lt('scheduled_at', tomorrow.toISOString())
+        .gte('scheduled_at', startOfDay.toISOString())
+        .lte('scheduled_at', endOfDay.toISOString())
         .order('scheduled_at', { ascending: true })
 
       if (!error) setAppointments(data || [])
       setLoading(false)
     }
     fetchAppointments()
-  }, [supabase])
+  }, [supabase, selectedDate])
+
+  const dateText = selectedDate 
+    ? selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
+    : 'Selecione uma data'
 
   return (
     <div className="space-y-6">
@@ -49,10 +55,13 @@ export default function CalendarPage() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <HybridCalendar />
+          <HybridCalendar selectedDate={selectedDate} onSelect={setSelectedDate} />
         </div>
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
-          <h2 className="text-lg font-bold text-[#1A1514] mb-6">Atendimentos do Dia</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-2">
+            <h2 className="text-lg font-bold text-[#1A1514]">Atendimentos do Dia</h2>
+            <span className="text-sm font-semibold text-[#A58079] bg-[#A58079]/10 px-3 py-1 rounded-full capitalize">{dateText}</span>
+          </div>
           
           {loading ? (
             <div className="flex justify-center py-12">

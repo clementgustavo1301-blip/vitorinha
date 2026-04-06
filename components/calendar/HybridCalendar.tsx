@@ -1,8 +1,9 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DayPicker } from 'react-day-picker'
 import { ptBR } from 'date-fns/locale'
 import 'react-day-picker/dist/style.css'
+import { createClient } from '@/lib/supabase/client'
 
 type CalendarEvent = {
   id: string
@@ -11,15 +12,43 @@ type CalendarEvent = {
   patientName: string
 }
 
-export default function HybridCalendar() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+interface HybridCalendarProps {
+  selectedDate?: Date
+  onSelect?: (date: Date | undefined) => void
+}
 
-  // Mock events for the UI
-  const events: CalendarEvent[] = [
-    { id: '1', date: new Date(), type: 'clinic', patientName: 'Maria Silva' },
-    { id: '2', date: new Date(), type: 'home', patientName: 'João Oliveira' },
-    { id: '3', date: new Date(new Date().setDate(new Date().getDate() + 2)), type: 'home', patientName: 'Carlos Santos' },
-  ]
+export default function HybridCalendar({ selectedDate: externalDate, onSelect }: HybridCalendarProps = {}) {
+  const [internalDate, setInternalDate] = useState<Date | undefined>(new Date())
+  const selectedDate = externalDate !== undefined ? externalDate : internalDate
+  const handleSelect = onSelect || setInternalDate
+
+  const [events, setEvents] = useState<CalendarEvent[]>([])
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const supabase = createClient()
+      const start = new Date()
+      start.setMonth(start.getMonth() - 2) // Fetch from 2 months ago 
+      const end = new Date()
+      end.setMonth(end.getMonth() + 4) // Fetch up to 4 months ahead
+
+      const { data } = await supabase
+        .from('appointments')
+        .select('id, scheduled_at, type, patients(full_name)')
+        .gte('scheduled_at', start.toISOString())
+        .lte('scheduled_at', end.toISOString())
+
+      if (data) {
+        setEvents(data.map((d: any) => ({
+          id: d.id,
+          date: new Date(d.scheduled_at),
+          type: d.type as 'home' | 'clinic',
+          patientName: d.patients?.full_name || 'Paciente'
+        })))
+      }
+    }
+    fetchEvents()
+  }, [])
 
   const customModifiers = {
     hasClinicEvent: events.filter(e => e.type === 'clinic').map(e => e.date),
@@ -69,7 +98,7 @@ export default function HybridCalendar() {
       <DayPicker
         mode="single"
         selected={selectedDate}
-        onSelect={setSelectedDate}
+        onSelect={handleSelect}
         locale={ptBR}
         modifiers={customModifiers}
         modifiersClassNames={customModifiersClassNames}

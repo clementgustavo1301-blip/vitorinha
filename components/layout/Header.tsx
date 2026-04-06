@@ -7,6 +7,7 @@ import { useRole } from '@/components/layout/RoleContext'
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const pathname = usePathname()
   const { role, setRole } = useRole()
 
@@ -34,11 +35,51 @@ export default function Header() {
         {/* Search bar removed as requested */}
       </div>
 
-      <div className="flex items-center gap-4 ml-auto">
-        <button className="p-2 text-[#E8DCDA] hover:text-[#A58079] hover:bg-[#A58079]/10 rounded-full transition-all cursor-pointer relative">
+      <div className="flex items-center gap-4 ml-auto relative">
+        <button 
+          onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+          className="p-2 text-[#E8DCDA] hover:text-[#A58079] hover:bg-[#A58079]/10 rounded-full transition-all cursor-pointer relative"
+        >
           <Bell className="h-5 w-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#A58079] rounded-full border border-[#1A1514]"></span>
         </button>
+
+        {isNotificationsOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)}></div>
+            <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-[#A58079]/10 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+              <div className="p-4 border-b border-[#A58079]/10 bg-[#F9F7F6]">
+                <h3 className="font-bold text-[#1A1514]">Atualizações Recentes</h3>
+              </div>
+              <div className="max-h-80 overflow-y-auto p-4 space-y-4">
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[#A58079] mt-1.5 shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#2D2422]">Calendário Sincronizado</p>
+                    <p className="text-xs text-[#6B5C59] mt-0.5">A agenda híbrida agora puxa todos os agendamentos diretamente do banco de dados.</p>
+                    <p className="text-[10px] text-[#A58079] mt-2 font-medium">06 de Abril, 2026</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 rounded-full bg-[#A58079] mt-1.5 shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#2D2422]">Galeria com Zoom Modal</p>
+                    <p className="text-xs text-[#6B5C59] mt-0.5">As fotos das feridas na linha do tempo agora expandem e permitem visualização em detalhes.</p>
+                    <p className="text-[10px] text-[#A58079] mt-2 font-medium">06 de Abril, 2026</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 text-opacity-80">
+                  <div className="w-2 h-2 rounded-full bg-gray-300 mt-1.5 shrink-0"></div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Histórico de Saúde</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Foi adicionada aba para salvar comorbidades e cirurgias prévias integradas à evolução.</p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-medium">06 de Abril, 2026</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </header>
 

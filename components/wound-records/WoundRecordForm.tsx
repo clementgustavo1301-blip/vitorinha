@@ -11,23 +11,25 @@ const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false })
 interface WoundRecordFormProps {
   patientId: string
   appointmentId?: string
+  initialData?: any
   onSaved?: () => void
+  onCancel?: () => void
 }
 
-export default function WoundRecordForm({ patientId, appointmentId, onSaved }: WoundRecordFormProps) {
+export default function WoundRecordForm({ patientId, appointmentId, initialData, onSaved, onCancel }: WoundRecordFormProps) {
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
-  const [location, setLocation] = useState('')
-  const [tissueTypes, setTissueTypes] = useState<string[]>([])
-  const [exudateTypes, setExudateTypes] = useState<string[]>([])
-  const [exudateVolume, setExudateVolume] = useState('')
-  const [odor, setOdor] = useState('')
-  const [painLevel, setPainLevel] = useState<number>(5)
-  const [treatment, setTreatment] = useState<string>('')
-  const [observations, setObservations] = useState<string>('')
+  const [location, setLocation] = useState(initialData?.location || '')
+  const [tissueTypes, setTissueTypes] = useState<string[]>(initialData?.tissue_type ? initialData.tissue_type.split(', ') : [])
+  const [exudateTypes, setExudateTypes] = useState<string[]>(initialData?.exudate ? initialData.exudate.split(', ') : [])
+  const [exudateVolume, setExudateVolume] = useState(initialData?.exudate_volume || '')
+  const [odor, setOdor] = useState(initialData?.odor || '')
+  const [painLevel, setPainLevel] = useState<number>(initialData?.pain_level ?? 5)
+  const [treatment, setTreatment] = useState<string>(initialData?.treatment_applied || '')
+  const [observations, setObservations] = useState<string>(initialData?.notes || '')
 
   const toggleTissue = (t: string) => {
     setTissueTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
@@ -56,18 +58,37 @@ export default function WoundRecordForm({ patientId, appointmentId, onSaved }: W
     setError('')
 
     try {
-      const { error: dbError } = await supabase
-        .from('wound_records')
-        .insert({
+      const recordData: any = {
+        location: location.trim(),
+        tissue_type: tissueTypes.join(', ') || null,
+        exudate: exudateTypes.join(', ') || null,
+        exudate_volume: exudateVolume || null,
+        odor: odor || null,
+        pain_level: painLevel,
+        treatment_applied: treatment || null,
+        notes: observations || null,
+      }
+
+      let dbError;
+      if (initialData?.id) {
+        // Only include IDs for new records
+        const { error } = await supabase
+          .from('wound_records')
+          .update(recordData)
+          .eq('id', initialData.id)
+        dbError = error
+      } else {
+        // Include patient and appointment IDs for new records
+        const insertData = {
+          ...recordData,
           patient_id: patientId,
           appointment_id: appointmentId || null,
-          location: location.trim(),
-          tissue_type: tissueTypes.join(', ') || null,
-          exudate: exudateTypes.join(', ') || null,
-          pain_level: painLevel,
-          treatment_applied: treatment || null,
-          notes: observations || null,
-        })
+        }
+        const { error } = await supabase
+          .from('wound_records')
+          .insert(insertData)
+        dbError = error
+      }
 
       if (dbError) throw dbError
 
@@ -210,13 +231,22 @@ export default function WoundRecordForm({ patientId, appointmentId, onSaved }: W
       )}
 
       <div className="flex justify-end gap-4 pt-4 border-t border-[#A58079]/10">
+        {onCancel && (
+          <button 
+            type="button"
+            onClick={onCancel}
+            className="px-8 py-3 rounded-full font-medium text-[#6B5C59] hover:bg-gray-100 transition-all"
+          >
+            Cancelar
+          </button>
+        )}
         <button 
           type="submit" 
           disabled={saving}
           className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-8 py-3 rounded-full font-medium shadow-md transition-all flex items-center gap-2 disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {saving ? 'Salvando...' : 'Salvar Prontuário'}
+          {saving ? 'Salvando...' : initialData?.id ? 'Atualizar Prontuário' : 'Salvar Prontuário'}
         </button>
       </div>
     </form>

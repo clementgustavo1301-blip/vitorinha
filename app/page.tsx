@@ -22,7 +22,7 @@ export default function Dashboard() {
         supabase.from('appointments').select('id', { count: 'exact', head: true }).gte('scheduled_at', todayStart.toISOString()).lte('scheduled_at', todayEnd.toISOString()),
         supabase.from('patients').select('id', { count: 'exact', head: true }),
         supabase.from('wound_records').select('id', { count: 'exact', head: true }),
-        supabase.from('appointments').select('*, patients (full_name, address)').gte('scheduled_at', now.toISOString()).order('scheduled_at', { ascending: true }).limit(5)
+        supabase.from('appointments').select('*, patients (full_name, address)').gte('scheduled_at', todayStart.toISOString()).order('scheduled_at', { ascending: true }).limit(5)
       ])
 
       setStats({

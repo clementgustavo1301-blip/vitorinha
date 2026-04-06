@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, Calendar, Clock } from 'lucide-react'
+import { Loader2, Calendar, Clock, Plus } from 'lucide-react'
 import HybridCalendar from '@/components/calendar/HybridCalendar'
 import AppointmentBadge from '@/components/calendar/AppointmentBadge'
 
@@ -39,28 +39,30 @@ export default function CalendarPage() {
     : 'Selecione uma data'
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#1A1514]">Agenda Híbrida</h1>
-          <p className="text-[#6B5C59] mt-1">Gerencie consultas em clínica e domicílio.</p>
+          <h1 className="text-xl md:text-2xl font-bold text-[#1A1514]">Agenda Híbrida</h1>
+          <p className="text-[#6B5C59] mt-0.5 text-sm hidden sm:block">Gerencie consultas em clínica e domicílio.</p>
         </div>
         <Link 
           href="/appointments/new" 
-          className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-6 py-2 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-2"
+          className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-4 md:px-6 py-2 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-1.5 text-sm md:text-base shrink-0"
         >
-          + Novo Agendamento
+          <Plus className="h-4 w-4" />
+          <span className="hidden sm:inline">Novo Agendamento</span>
+          <span className="sm:hidden">Novo</span>
         </Link>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-1">
           <HybridCalendar selectedDate={selectedDate} onSelect={setSelectedDate} />
         </div>
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-[#A58079]/10 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-2">
-            <h2 className="text-lg font-bold text-[#1A1514]">Atendimentos do Dia</h2>
-            <span className="text-sm font-semibold text-[#A58079] bg-[#A58079]/10 px-3 py-1 rounded-full capitalize">{dateText}</span>
+        <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 border border-[#A58079]/10 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 md:mb-6 gap-2">
+            <h2 className="text-base md:text-lg font-bold text-[#1A1514]">Atendimentos do Dia</h2>
+            <span className="text-xs md:text-sm font-semibold text-[#A58079] bg-[#A58079]/10 px-3 py-1 rounded-full capitalize self-start sm:self-auto">{dateText}</span>
           </div>
           
           {loading ? (
@@ -68,13 +70,13 @@ export default function CalendarPage() {
               <Loader2 className="w-8 h-8 text-[#A58079] animate-spin" />
             </div>
           ) : appointments.length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-[#A58079]/20 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-[#2D2422]">Nenhum atendimento hoje</h3>
-              <p className="text-[#6B5C59] mt-2">Agende um novo atendimento para começar.</p>
+            <div className="text-center py-10 md:py-12">
+              <Clock className="w-10 h-10 md:w-12 md:h-12 text-[#A58079]/20 mx-auto mb-3 md:mb-4" />
+              <h3 className="text-base md:text-lg font-bold text-[#2D2422]">Nenhum atendimento hoje</h3>
+              <p className="text-[#6B5C59] mt-1.5 md:mt-2 text-sm">Agende um novo atendimento para começar.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {appointments.map((appt) => {
                 const time = new Date(appt.scheduled_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
                 const patientName = appt.patients?.full_name || 'Paciente'
@@ -85,21 +87,21 @@ export default function CalendarPage() {
                   <Link 
                     href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
                     key={appt.id} 
-                    className={`p-4 rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex flex-col md:flex-row gap-4 items-start md:items-center justify-between transition hover:shadow-md hover:-translate-y-0.5 cursor-pointer block group`}
+                    className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex items-center gap-3 md:gap-4 transition hover:shadow-md active:scale-[0.98] md:active:scale-100 md:hover:-translate-y-0.5 cursor-pointer group`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-14 h-14 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex flex-col items-center justify-center font-bold border transition group-hover:scale-105`}>
-                        <span className="text-sm">{time}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-[#2D2422] group-hover:text-[#A58079] transition-colors">{patientName}</h3>
-                        {appt.notes && <p className="text-sm text-[#6B5C59] mt-1">{appt.notes}</p>}
-                        {isHome && appt.patients?.address && (
-                          <p className="text-xs text-[#6B5C59] mt-1 truncate max-w-[250px]">{appt.patients.address}</p>
-                        )}
-                      </div>
+                    <div className={`w-11 h-11 md:w-14 md:h-14 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex flex-col items-center justify-center font-bold border transition group-hover:scale-105 shrink-0`}>
+                      <span className="text-xs md:text-sm">{time}</span>
                     </div>
-                    <AppointmentBadge type={appt.type} />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[#2D2422] group-hover:text-[#A58079] transition-colors text-sm md:text-base truncate">{patientName}</h3>
+                      {appt.notes && <p className="text-xs md:text-sm text-[#6B5C59] mt-0.5 truncate">{appt.notes}</p>}
+                      {isHome && appt.patients?.address && (
+                        <p className="text-xs text-[#6B5C59] mt-0.5 truncate">{appt.patients.address}</p>
+                      )}
+                    </div>
+                    <div className="shrink-0 hidden sm:block">
+                      <AppointmentBadge type={appt.type} />
+                    </div>
                   </Link>
                 )
               })}

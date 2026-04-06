@@ -113,3 +113,49 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(165,128,121,0.15);
 }
+
+/* Base Utilities for Mobile */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Micro-animations */
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(0.98); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Mobile optimized rich text display */
+.ql-editor-mini {
+  padding: 0 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+  color: var(--color-text) !important;
+}
+
+.ql-editor-mini p {
+  margin-bottom: 0.75rem !important;
+}
+
+.quill-mobile .ql-container {
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+  border: none !important;
+}
+
+.quill-mobile .ql-toolbar {
+  border: none !important;
+  border-bottom: 1px solid rgba(165,128,121,0.1) !important;
+  background: rgba(249, 247, 246, 0.5) !important;
+  padding: 8px !important;
+}

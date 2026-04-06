@@ -1,55 +1,55 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Check, Loader2, Search } from 'lucide-react'
+import { Search, Loader2, Calendar, Clock, MapPin, Building2, User, Check, X, Phone, ArrowLeft } from 'lucide-react'
 
-export default function AppointmentForm({ mode = 'schedule' }: { mode?: 'schedule' | 'immediate' }) {
+interface AppointmentFormProps {
+  onSuccess?: () => void
+  onCancel?: () => void
+  initialType?: 'clinic' | 'home'
+}
+
+export default function AppointmentForm({ onSuccess, onCancel, initialType = 'clinic' }: AppointmentFormProps) {
   const router = useRouter()
   const supabase = createClient()
-
-  const [saving, setSaving] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
+  // Form State
   const [cpf, setCpf] = useState('')
-  const [isSearchingCpf, setIsSearchingCpf] = useState(false)
-  const [cpfFound, setCpfFound] = useState(false)
-  const [existingPatientId, setExistingPatientId] = useState<string | null>(null)
-
-  const [patientData, setPatientData] = useState({
-    name: '',
-    dob: '',
-    phone: '',
-    cep: '',
-    address: ''
-  })
-  const [isSearchingCep, setIsSearchingCep] = useState(false)
-
-  const [appointmentType, setAppointmentType] = useState<'clinic' | 'home'>('clinic')
+  const [patientId, setPatientId] = useState<string | null>(null)
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
+  const [type, setType] = useState<'clinic' | 'home'>(initialType)
   const [notes, setNotes] = useState('')
 
-  const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11)
-    if (digits.length <= 3) return digits
-    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
-    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+  // CPF Formatting
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value.length > 11) value = value.slice(0, 11)
+    
+    // Auto-search when 11 digits
+    if (value.length === 11 && value !== cpf.replace(/\D/g, '')) {
+      searchPatient(value)
+    }
+    
+    // Masking
+    if (value.length <= 11) {
+      value = value.replace(/(\d{3})(\d)/, '$1.$2')
+      value = value.replace(/(\d{3})(\d)/, '$1.$2')
+      value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+    }
+    setCpf(value)
   }
 
-  const handleCpfChange = (value: string) => {
-    setCpf(formatCpf(value))
-    setCpfFound(false)
-    setExistingPatientId(null)
-  }
-
-  const handleCpfBlur = async () => {
-    const cleanCpf = cpf.replace(/\D/g, '')
-    if (cleanCpf.length < 11) return
-    
-    setIsSearchingCpf(true)
-    
+  const searchPatient = async (cleanCpf: string) => {
+    setSearching(true)
+    setError('')
     try {
       const { data, error } = await supabase
         .from('patients')
@@ -57,300 +57,234 @@ export default function AppointmentForm({ mode = 'schedule' }: { mode?: 'schedul
         .eq('cpf', cleanCpf)
         .maybeSingle()
 
-      if (!error && data) {
-        setCpfFound(true)
-        setExistingPatientId(data.id)
-        setPatientData({
-          name: data.full_name || '',
-          dob: data.date_of_birth || '',
-          phone: data.phone || '',
-          cep: '',
-          address: data.address || ''
-        })
+      if (data) {
+        setPatientId(data.id)
+        setFullName(data.full_name || '')
+        setPhone(data.phone || '')
+        setAddress(data.address || '')
+      } else {
+        // Reset if not found to allow new registration
+        setPatientId(null)
       }
     } catch (err) {
-      console.error("Erro ao buscar CPF:", err)
+      console.error(err)
+    } finally {
+      setSearching(false)
     }
-    
-    setIsSearchingCpf(false)
   }
 
-  const handleCepBlur = async () => {
-    const cleanCep = patientData.cep.replace(/\D/g, '')
-    if (cleanCep.length !== 8) return
-
-    setIsSearchingCep(true)
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-      const data = await res.json()
-      
-      if (!data.erro) {
-        setPatientData(prev => ({
-          ...prev,
-          address: `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`
-        }))
-      }
-    } catch (err) {
-      console.error("Erro ao buscar CEP")
-    }
-    setIsSearchingCep(false)
-  }
-
-  const handleSubmit = async () => {
-    const cleanCpf = cpf.replace(/\D/g, '')
-    if (!cleanCpf || cleanCpf.length < 11) {
-      setError('Informe o CPF do paciente.')
-      return
-    }
-    if (!patientData.name.trim()) {
-      setError('Informe o nome do paciente.')
-      return
-    }
-    if (mode === 'schedule' && !scheduledAt) {
-      setError('Selecione a data e hora do agendamento.')
-      return
-    }
-
-    setSaving(true)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
     setError('')
 
     try {
-      let patientId = existingPatientId
-      if (!patientId) {
-        // Final safety check by CPF before creating new
-        const { data: cpfLookup } = await supabase
-          .from('patients')
-          .select('id')
-          .eq('cpf', cleanCpf)
-          .maybeSingle()
-        
-        if (cpfLookup) {
-          patientId = cpfLookup.id
-        }
-      }
+      let currentPatientId = patientId
 
-      if (patientId) {
-        // Update existing patient data to keep it fresh
-        const { error: updateError } = await supabase
-          .from('patients')
-          .update({
-            full_name: patientData.name.trim(),
-            date_of_birth: patientData.dob || null,
-            phone: patientData.phone || null,
-            address: patientData.address || null,
-          })
-          .eq('id', patientId)
-        
-        if (updateError) throw updateError
-      } else {
-        // Create new patient with CPF
-        const { data: patient, error: patientError } = await supabase
+      // 1. Create patient if doesn't exist
+      if (!currentPatientId) {
+        const { data: newPatient, error: pError } = await supabase
           .from('patients')
           .insert({
-            full_name: patientData.name.trim(),
-            cpf: cleanCpf,
-            date_of_birth: patientData.dob || null,
-            phone: patientData.phone || null,
-            address: patientData.address || null,
+            cpf: cpf.replace(/\D/g, ''),
+            full_name: fullName,
+            phone: phone,
+            address: address
           })
           .select('id')
           .single()
 
-        if (patientError) throw patientError
-        patientId = patient.id
+        if (pError) throw pError
+        currentPatientId = newPatient.id
+      } else {
+        // Update existing patient info
+        await supabase.from('patients').update({ full_name: fullName, phone, address }).eq('id', currentPatientId)
       }
 
-      // Create the appointment
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .insert({
-          patient_id: patientId,
-          type: appointmentType,
-          scheduled_at: mode === 'schedule' ? new Date(scheduledAt).toISOString() : new Date().toISOString(),
-          notes: notes || null,
-          status: mode === 'schedule' ? 'scheduled' : 'completed'
-        })
+      // 2. Create appointment
+      const { error: aError } = await supabase.from('appointments').insert({
+        patient_id: currentPatientId,
+        scheduled_at: scheduledAt,
+        type: type,
+        notes: notes,
+        status: 'scheduled'
+      })
 
-      if (appointmentError) throw appointmentError
+      if (aError) throw aError
 
       setSuccess(true)
-      if (mode === 'immediate') {
-        setTimeout(() => router.push(`/patients/${patientId}?new=true`), 1000)
-      } else {
-        setTimeout(() => router.push('/calendar'), 1500)
-      }
+      setTimeout(() => {
+        if (onSuccess) onSuccess()
+        else router.push('/')
+      }, 2000)
+
     } catch (err: any) {
-      console.error('Erro ao salvar:', err)
-      setError(err.message || 'Erro ao salvar. Tente novamente.')
-    } finally {
-      setSaving(false)
+      setError(err.message || 'Erro ao agendar consulta. Verifique os dados.')
+      setLoading(false)
     }
   }
 
   if (success) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4">
-        <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-          <Check className="w-8 h-8 text-green-600" />
+      <div className="flex flex-col items-center justify-center py-12 md:py-20 gap-4 text-center animate-in fade-in duration-500">
+        <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center ring-8 ring-green-50/50 shadow-inner">
+          <Check className="w-10 h-10 text-green-600" />
         </div>
-        <h2 className="text-xl font-bold text-[#2D2422]">
-          {mode === 'immediate' ? 'Atendimento Iniciado!' : 'Agendamento Salvo!'}
-        </h2>
-        <p className="text-[#6B5C59]">
-          {mode === 'immediate' ? 'Redirecionando para a linha do tempo...' : 'Redirecionando para a agenda...'}
-        </p>
+        <div className="space-y-1">
+          <h2 className="text-xl md:text-2xl font-bold text-[#1A1514]">Agendamento Concluído!</h2>
+          <p className="text-sm md:text-base text-[#6B5C59]">O horário foi reservado com sucesso no sistema.</p>
+        </div>
+        <div className="mt-4 px-6 py-3 bg-[#F9F7F6] rounded-2xl border border-[#A58079]/10 text-xs font-bold text-[#A58079] uppercase tracking-wider">
+          Direcionando para o Dashboard...
+        </div>
       </div>
     )
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); handleSubmit() }} className="space-y-6">
-      <div className="bg-white p-6 rounded-3xl border border-[#A58079]/10 shadow-sm">
-        <h3 className="text-lg font-bold text-[#1A1514] mb-4 border-b border-[#A58079]/10 pb-2">1. Dados do Paciente</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-[#2D2422] flex items-center gap-2">
-              CPF *
-              {isSearchingCpf && <span className="text-xs text-[#A58079] animate-pulse flex items-center gap-1"><Search className="w-3 h-3" /> Buscando na base...</span>}
-              {cpfFound && <span className="text-xs text-green-600 font-bold">✓ Paciente encontrado!</span>}
-            </label>
-            <input 
-              type="text" 
-              className={`w-full bg-[#F9F7F6] border rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans ${cpfFound ? 'border-green-400 bg-green-50/50' : 'border-[#A58079]/20'}`}
-              placeholder="000.000.000-00" 
-              value={cpf}
-              onChange={e => handleCpfChange(e.target.value)}
-              onBlur={handleCpfBlur}
-              maxLength={14}
-              required
-            />
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Nome Completo *</label>
-            <input 
-              type="text" 
-              className={`w-full bg-[#F9F7F6] border ${cpfFound ? 'border-green-200 ring-4 ring-green-50' : 'border-[#A58079]/20'} rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans`} 
-              placeholder="Ex: Maria da Silva" 
-              value={patientData.name}
-              onChange={e => setPatientData({...patientData, name: e.target.value})}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Data de Nascimento</label>
-            <input 
-              type="date" 
-              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
-              value={patientData.dob}
-              onChange={e => setPatientData({...patientData, dob: e.target.value})}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Telefone / WhatsApp</label>
-            <input 
-              type="text" 
-              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
-              placeholder="(00) 00000-0000" 
-              value={patientData.phone}
-              onChange={e => setPatientData({...patientData, phone: e.target.value})}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-[#2D2422] flex items-center gap-2">
-              CEP
-              {isSearchingCep && <span className="text-xs text-[#A58079] animate-pulse">Buscando...</span>}
-            </label>
-            <input 
-              type="text" 
-              className={`w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans ${isSearchingCep ? 'border-[#A58079]' : ''}`}
-              placeholder="00000-000" 
-              value={patientData.cep}
-              onChange={e => setPatientData({...patientData, cep: e.target.value})}
-              onBlur={handleCepBlur}
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Endereço Completo</label>
-            <input 
-              type="text" 
-              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
-              placeholder="Rua, Número, Bairro, Cidade" 
-              value={patientData.address}
-              onChange={e => setPatientData({...patientData, address: e.target.value})}
-            />
+    <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-4 md:space-y-6">
+        {/* Type Selection - Redesigned as tabs on mobile */}
+        <div className="space-y-3">
+          <label className="text-xs md:text-sm font-bold text-[#2D2422] uppercase tracking-widest px-1">Modalidade de Atendimento</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setType('clinic')}
+              className={`flex flex-col items-center gap-2 p-4 md:p-6 rounded-2xl md:rounded-3xl border-2 transition-all active:scale-[0.98] ${type === 'clinic' ? 'border-[#A58079] bg-[#A58079]/5 shadow-md shadow-[#A58079]/10' : 'border-[#A58079]/10 bg-[#F9F7F6] opacity-70'}`}
+            >
+              <Building2 className={`w-6 h-6 md:w-8 md:h-8 transition-transform ${type === 'clinic' ? 'scale-110 text-[#A58079]' : 'text-[#6B5C59]'}`} />
+              <span className={`text-xs md:text-sm font-bold uppercase tracking-wider ${type === 'clinic' ? 'text-[#1A1514]' : 'text-[#6B5C59]'}`}>Na Clínica</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setType('home')}
+              className={`flex flex-col items-center gap-2 p-4 md:p-6 rounded-2xl md:rounded-3xl border-2 transition-all active:scale-[0.98] ${type === 'home' ? 'border-[#2D2422] bg-[#2D2422]/5 shadow-md shadow-[#2D2422]/10' : 'border-[#A58079]/10 bg-[#F9F7F6] opacity-70'}`}
+            >
+              <MapPin className={`w-6 h-6 md:w-8 md:h-8 transition-transform ${type === 'home' ? 'scale-110 text-[#2D2422]' : 'text-[#6B5C59]'}`} />
+              <span className={`text-xs md:text-sm font-bold uppercase tracking-wider ${type === 'home' ? 'text-[#1A1514]' : 'text-[#6B5C59]'}`}>Domiciliar</span>
+            </button>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white p-6 rounded-3xl border border-[#A58079]/10 shadow-sm">
-        <h3 className="text-lg font-bold text-[#1A1514] mb-4 border-b border-[#A58079]/10 pb-2">
-          {mode === 'immediate' ? '2. Dados do Atendimento' : '2. Dados do Agendamento'}
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-[#2D2422]">Modalidade de Atendimento</label>
-            <div className="flex gap-4">
-              <label className={`flex flex-1 items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors ${appointmentType === 'clinic' ? 'border-[#A58079] bg-[#A58079]/10' : 'border-[#A58079]/30 bg-[#F9F7F6] hover:bg-[#A58079]/5'}`}>
-                <input type="radio" name="type" value="clinic" className="text-[#A58079] focus:ring-[#A58079] mr-2" checked={appointmentType === 'clinic'} onChange={() => setAppointmentType('clinic')} />
-                <span className="font-medium text-[#2D2422]">Clínica</span>
-              </label>
-              <label className={`flex flex-1 items-center justify-center p-3 rounded-2xl border cursor-pointer transition-colors ${appointmentType === 'home' ? 'border-[#2D2422] bg-[#2D2422]/10' : 'border-[#2D2422]/20 bg-[#F9F7F6] hover:bg-[#2D2422]/5'}`}>
-                <input type="radio" name="type" value="home" className="text-[#2D2422] focus:ring-[#2D2422] mr-2" checked={appointmentType === 'home'} onChange={() => setAppointmentType('home')} />
-                <span className="font-medium text-[#6B5C59]">Domiciliar</span>
-              </label>
-            </div>
-          </div>
-          
-          {mode === 'schedule' && (
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-[#2D2422]">Data e Hora *</label>
-              <input 
-                type="datetime-local" 
-                className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-3 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans" 
-                value={scheduledAt}
-                onChange={e => setScheduledAt(e.target.value)}
+        {/* Patient Identity */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] flex items-center justify-between px-1">
+              CPF do Paciente
+              {searching && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#A58079]" />}
+              {patientId && !searching && <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100 uppercase tracking-tighter">✔ Cadastro Localizado</span>}
+            </label>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A58079]/60" />
+              <input
+                type="text"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={handleCpfChange}
+                className={`w-full bg-[#F9F7F6] border rounded-xl md:rounded-2xl py-3.5 md:py-4 pl-11 pr-4 text-sm text-[#2D2422] outline-none transition-all shadow-sm ${patientId ? 'border-green-300 focus:ring-green-100 focus:border-green-400' : 'border-[#A58079]/20 focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5'}`}
                 required
               />
             </div>
-          )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
+              <User className="w-3.5 h-3.5 text-[#A58079]" /> Nome Completo
+            </label>
+            <input
+              type="text"
+              placeholder="Digite o nome do paciente"
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
+              required
+            />
+          </div>
         </div>
-        
-        <div className="space-y-2 mt-4">
-          <label className="text-sm font-semibold text-[#2D2422]">Motivo do Agendamento (Opcional)</label>
-          <textarea 
-            className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] transition-all font-sans min-h-[80px]" 
-            placeholder="Primeira avaliação, troca de curativo, etc..."
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-          />
+
+        {/* Contact & Date */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
+              <Phone className="w-3.5 h-3.5 text-[#A58079]" /> Celular / WhatsApp
+            </label>
+            <input
+              type="tel"
+              placeholder="(00) 00000-0000"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-[#A58079]" /> Data e Hora do Atendimento
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Address & Notes */}
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
+              <MapPin className="w-3.5 h-3.5 text-[#A58079]" /> Endereço Completo
+            </label>
+            <input
+              type="text"
+              placeholder="Rua, número, bairro e cidade..."
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
+              required={type === 'home'}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 uppercase tracking-widest">Informações Adicionais</label>
+            <textarea
+              placeholder="Observações sobre o trajeto, sintomas relatados or motivo da consulta..."
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all min-h-[100px] md:min-h-[120px] resize-none shadow-sm"
+            />
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-600 text-sm font-medium">
-          {error}
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-xs font-bold animate-pulse flex items-center gap-2">
+          <X className="w-4 h-4 shrink-0" /> {error}
         </div>
       )}
 
-      <div className="flex justify-end gap-4 pt-4">
-        <button 
-          type="button" 
-          onClick={() => router.back()}
-          className="border border-[#A58079] text-[#A58079] hover:bg-[#A58079] hover:text-white rounded-full px-6 py-2 transition-all font-medium"
+      <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-4">
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 bg-[#A58079] hover:bg-[#8C6A63] text-white py-4 rounded-full font-bold shadow-lg shadow-[#A58079]/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base order-1 sm:order-2"
         >
-          Cancelar
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calendar className="w-5 h-5" />}
+          {loading ? 'Confirmando...' : 'Finalizar Agendamento'}
         </button>
-        <button 
-          type="submit" 
-          disabled={saving}
-          className="bg-[#A58079] hover:bg-[#8C6A63] text-white px-8 py-3 rounded-full font-medium shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {saving ? 'Registrando...' : mode === 'immediate' ? 'Iniciar Atendimento Agora' : 'Finalizar Cadastro e Agendar'}
-        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 bg-white border border-[#A58079]/20 text-[#6B5C59] py-4 rounded-full font-bold hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm md:text-base order-2 sm:order-1"
+          >
+            <ArrowLeft className="w-5 h-5" /> Cancelar
+          </button>
+        )}
       </div>
     </form>
   )

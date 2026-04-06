@@ -10,10 +10,9 @@ export default function MobileBottomNav() {
 
   const allNavItems = [
     { name: 'Dashboard', href: '/', icon: Home, roles: ['nurse', 'receptionist', 'admin'] },
-    { name: 'Agenda', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
-    { name: 'Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
-    { name: 'Evoluções', href: '/wound-records', icon: Activity, roles: ['nurse', 'admin'] },
-    { name: 'Admin', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
+    { name: 'Agenda Híbrida', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
+    { name: 'Pacientes & Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
+    { name: 'Homologações', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
   ]
   const navItems = allNavItems.filter(item => item.roles.includes(role))
 
@@ -58,7 +57,7 @@ export default function MobileBottomNav() {
             <div className="p-1.5 rounded-xl transition-all duration-300">
               <ArrowLeftRight className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-semibold tracking-wide">Trocar</span>
+            <span className="text-[10px] font-semibold tracking-wide">Trocar Vínculo</span>
           </Link>
         </div>
       </div>

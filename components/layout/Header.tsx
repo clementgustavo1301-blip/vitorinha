@@ -15,7 +15,6 @@ export default function Header() {
     { name: 'Dashboard', href: '/', icon: Home, roles: ['nurse', 'receptionist', 'admin'] },
     { name: 'Agenda Híbrida', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
     { name: 'Pacientes & Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
-    { name: 'Evoluções Globais', href: '/wound-records', icon: Activity, roles: ['nurse', 'admin'] },
     { name: 'Homologações', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
   ]
   const navItems = allNavItems.filter(item => item.roles.includes(role))
@@ -23,12 +22,11 @@ export default function Header() {
   // Page title based on path
   const getPageTitle = () => {
     if (pathname === '/') return 'Dashboard'
-    if (pathname.startsWith('/calendar')) return 'Agenda'
-    if (pathname.startsWith('/patients')) return 'Pacientes'
-    if (pathname.startsWith('/wound-records')) return 'Evoluções'
-    if (pathname.startsWith('/appointments')) return 'Agendamento'
-    if (pathname.startsWith('/attendances')) return 'Atendimento'
-    if (pathname.startsWith('/admin')) return 'Admin'
+    if (pathname.startsWith('/calendar')) return 'Agenda Híbrida'
+    if (pathname.startsWith('/patients')) return 'Pacientes & Prontuários'
+    if (pathname.startsWith('/appointments')) return 'Novo Agendamento'
+    if (pathname.startsWith('/attendances')) return 'Novo Atendimento'
+    if (pathname.startsWith('/admin')) return 'Homologações'
     return 'DermaCare'
   }
 

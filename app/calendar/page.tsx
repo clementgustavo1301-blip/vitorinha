@@ -84,25 +84,44 @@ export default function CalendarPage() {
                 const isHome = appt.type === 'home'
 
                 return (
-                  <Link 
-                    href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                  <div 
                     key={appt.id} 
-                    className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex items-center gap-3 md:gap-4 transition hover:shadow-md active:scale-[0.98] md:active:scale-100 md:hover:-translate-y-0.5 cursor-pointer group`}
+                    className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex items-center gap-3 md:gap-4 transition hover:shadow-md active:scale-[0.98] md:active:scale-100 md:hover:-translate-y-0.5 group relative`}
                   >
-                    <div className={`w-11 h-11 md:w-14 md:h-14 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex flex-col items-center justify-center font-bold border transition group-hover:scale-105 shrink-0`}>
+                    {/* Attendance Link (Background) */}
+                    <Link 
+                      href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                      className="absolute inset-0 z-0 rounded-xl md:rounded-2xl"
+                      title="Registrar Atendimento"
+                    />
+
+                    {/* Time / Type Link */}
+                    <Link 
+                      href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                      className={`relative z-10 w-11 h-11 md:w-14 md:h-14 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex flex-col items-center justify-center font-bold border transition hover:scale-110 shrink-0 shadow-sm`}
+                      title="Registrar Atendimento"
+                    >
                       <span className="text-xs md:text-sm">{time}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-[#2D2422] group-hover:text-[#A58079] transition-colors text-sm md:text-base truncate">{patientName}</h3>
+                    </Link>
+
+                    <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
+                      <Link 
+                        href={`/patients/${appt.patient_id}`}
+                        className="pointer-events-auto inline-block max-w-full"
+                        title="Ver Prontuário"
+                      >
+                        <h3 className="font-semibold text-[#2D2422] hover:text-[#A58079] transition-colors text-sm md:text-base truncate">{patientName}</h3>
+                      </Link>
                       {appt.notes && <p className="text-xs md:text-sm text-[#6B5C59] mt-0.5 truncate">{appt.notes}</p>}
                       {isHome && appt.patients?.address && (
                         <p className="text-xs text-[#6B5C59] mt-0.5 truncate">{appt.patients.address}</p>
                       )}
                     </div>
-                    <div className="shrink-0 hidden sm:block">
+
+                    <div className="shrink-0 hidden sm:block relative z-10">
                       <AppointmentBadge type={appt.type} />
                     </div>
-                  </Link>
+                  </div>
                 )
               })}
             </div>

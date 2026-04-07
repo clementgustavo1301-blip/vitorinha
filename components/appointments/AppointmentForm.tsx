@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Loader2, Calendar, Clock, MapPin, Building2, User, Check, X, Phone, ArrowLeft } from 'lucide-react'
+import { Search, Loader2, Calendar, Clock, MapPin, Building2, User, Check, X, Phone, ArrowLeft, Hash } from 'lucide-react'
+import CustomSelect from '@/components/ui/CustomSelect'
 
 interface AppointmentFormProps {
   onSuccess?: () => void
@@ -23,9 +24,12 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
   const [patientId, setPatientId] = useState<string | null>(null)
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [cep, setCep] = useState('')
   const [address, setAddress] = useState('')
+  const [addressNumber, setAddressNumber] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
   const [type, setType] = useState<'clinic' | 'home'>(initialType)
+  const [entryType, setEntryType] = useState('first_time')
   const [notes, setNotes] = useState('')
 
   // CPF Formatting
@@ -47,6 +51,25 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
     setCpf(value)
   }
 
+  // CEP Lookup (ViaCEP)
+  const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, '')
+    if (value.length > 8) value = value.slice(0, 8)
+    setCep(value)
+
+    if (value.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${value}/json/`)
+        const data = await res.json()
+        if (!data.erro) {
+          setAddress(`${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`)
+        }
+      } catch (err) {
+        console.error('Erro ao buscar CEP:', err)
+      }
+    }
+  }
+
   const searchPatient = async (cleanCpf: string) => {
     setSearching(true)
     setError('')
@@ -62,6 +85,8 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
         setFullName(data.full_name || '')
         setPhone(data.phone || '')
         setAddress(data.address || '')
+        setCep(data.cep || '')
+        setAddressNumber(data.address_number || '')
       } else {
         // Reset if not found to allow new registration
         setPatientId(null)
@@ -89,7 +114,9 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
             cpf: cpf.replace(/\D/g, ''),
             full_name: fullName,
             phone: phone,
-            address: address
+            address: address,
+            cep: cep,
+            address_number: addressNumber
           })
           .select('id')
           .single()
@@ -98,7 +125,13 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
         currentPatientId = newPatient.id
       } else {
         // Update existing patient info
-        await supabase.from('patients').update({ full_name: fullName, phone, address }).eq('id', currentPatientId)
+        await supabase.from('patients').update({ 
+          full_name: fullName, 
+          phone, 
+          address,
+          cep,
+          address_number: addressNumber
+        }).eq('id', currentPatientId)
       }
 
       // 2. Create appointment
@@ -106,6 +139,7 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
         patient_id: currentPatientId,
         scheduled_at: scheduledAt,
         type: type,
+        entry_type: entryType,
         notes: notes,
         status: 'scheduled'
       })
@@ -144,7 +178,7 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
   return (
     <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-4 md:space-y-6">
-        {/* Type Selection - Redesigned as tabs on mobile */}
+        {/* Type Selection */}
         <div className="space-y-3">
           <label className="text-xs md:text-sm font-bold text-[#2D2422] uppercase tracking-widest px-1">Modalidade de Atendimento</label>
           <div className="grid grid-cols-2 gap-3">
@@ -203,7 +237,7 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
           </div>
         </div>
 
-        {/* Contact & Date */}
+        {/* Contact & CEP */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div className="space-y-2">
             <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
@@ -221,6 +255,65 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
 
           <div className="space-y-2">
             <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
+              <MapPin className="w-3.5 h-3.5 text-[#A58079]" /> CEP
+            </label>
+            <input
+              type="text"
+              placeholder="00000-000"
+              value={cep}
+              onChange={handleCepChange}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
+              required={type === 'home'}
+            />
+          </div>
+        </div>
+
+        {/* Address & Number */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+          <div className="md:col-span-3 space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
+              <Building2 className="w-3.5 h-3.5 text-[#A58079]" /> Logradouro / Bairro / Cidade
+            </label>
+            <input
+              type="text"
+              placeholder="Rua, Bairro, Cidade - UF"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
+              required={type === 'home'}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
+              <Hash className="w-3.5 h-3.5 text-[#A58079]" /> Número
+            </label>
+            <input
+              type="text"
+              placeholder="123"
+              value={addressNumber}
+              onChange={e => setAddressNumber(e.target.value)}
+              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
+              required={type === 'home'}
+            />
+          </div>
+        </div>
+
+        {/* Entry Type & Date */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <CustomSelect
+            label="Tipo de Entrada"
+            options={[
+              { value: 'first_time', label: 'Primeira Vez', description: 'Novo paciente ou nova lesão' },
+              { value: 'return', label: 'Retorno', description: 'Acompanhamento de tratamento' }
+            ]}
+            value={entryType}
+            onChange={setEntryType}
+            rounded="!rounded-xl md:!rounded-2xl"
+          />
+
+          <div className="space-y-2">
+            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-[#A58079]" /> Data e Hora do Atendimento
             </label>
             <input
@@ -233,31 +326,14 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
           </div>
         </div>
 
-        {/* Address & Notes */}
-        <div className="space-y-4 pt-2">
-          <div className="space-y-2">
-            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 flex items-center gap-2">
-              <MapPin className="w-3.5 h-3.5 text-[#A58079]" /> Endereço Completo
-            </label>
-            <input
-              type="text"
-              placeholder="Rua, número, bairro e cidade..."
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all shadow-sm"
-              required={type === 'home'}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 uppercase tracking-widest">Informações Adicionais</label>
-            <textarea
-              placeholder="Observações sobre o trajeto, sintomas relatados or motivo da consulta..."
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all min-h-[100px] md:min-h-[120px] resize-none shadow-sm"
-            />
-          </div>
+        <div className="space-y-2">
+          <label className="text-xs md:text-sm font-bold text-[#2D2422] px-1 uppercase tracking-widest">Informações Adicionais</label>
+          <textarea
+            placeholder="Observações sobre o trajeto, sintomas relatados ou motivo da consulta..."
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-xl md:rounded-2xl p-4 text-sm text-[#2D2422] outline-none focus:border-[#A58079] focus:ring-4 focus:ring-[#A58079]/5 transition-all min-h-[100px] md:min-h-[120px] resize-none shadow-sm"
+          />
         </div>
       </div>
 

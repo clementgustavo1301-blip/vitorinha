@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useRole, Role } from '@/components/layout/RoleContext'
 import { createClient } from '@/lib/supabase/client'
 import { Shield, Stethoscope, ClipboardList, Activity, Building2, Clock, LogOut, Plus, X } from 'lucide-react'
+import CustomSelect from '@/components/ui/CustomSelect'
 
 const roleDefinitions = [
   {
@@ -244,39 +245,25 @@ export default function RoleSelectionPage() {
           </div>
 
           <form onSubmit={handleRequestRole} className="space-y-6 max-w-xl mx-auto">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-[#2D2422] ml-4">Selecione a Clínica</label>
-              <select
-                value={formClinic}
-                onChange={(e) => setFormClinic(e.target.value)}
-                className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-[28px] px-6 py-4 text-[#2D2422] focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans appearance-none font-bold"
-                required
-              >
-                <option value="" disabled>Selecione uma clínica...</option>
-                {clinics.map((clinic) => (
-                  <option key={clinic.id} value={clinic.id}>
-                    {clinic.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect 
+              label="Selecione a Clínica"
+              placeholder="Selecione uma clínica..."
+              options={clinics.map((c: any) => ({ value: c.id, label: c.name }))}
+              value={formClinic}
+              onChange={setFormClinic}
+              rounded="!rounded-[28px]"
+              className="!py-0"
+            />
 
-            <div className="space-y-2 pt-4">
-              <label className="text-sm font-bold text-[#2D2422] ml-4">Selecione o seu Perfil</label>
-              <select
-                value={formRole}
-                onChange={(e) => setFormRole(e.target.value as Role)}
-                className="w-full bg-[#F9F7F6] border border-[#A58079]/20 rounded-[28px] px-6 py-4 text-[#2D2422] focus:border-[#A58079] focus:ring-2 focus:ring-[#A58079]/10 transition-all font-sans appearance-none font-bold"
-                required
-              >
-                <option value="" disabled>Selecione um perfil...</option>
-                {roleDefinitions.map((roleDef) => (
-                  <option key={roleDef.id} value={roleDef.id}>
-                    {roleDef.title}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect 
+              label="Selecione o seu Perfil"
+              placeholder="Selecione um perfil..."
+              options={roleDefinitions.map((rd: any) => ({ value: rd.id, label: rd.title, description: rd.description }))}
+              value={formRole}
+              onChange={(val) => setFormRole(val as Role)}
+              rounded="!rounded-[28px]"
+              className="!py-0 mt-4"
+            />
 
             {formRole === 'nurse' && (
               <div className="space-y-2 pt-4 animate-in slide-in-from-top-2">

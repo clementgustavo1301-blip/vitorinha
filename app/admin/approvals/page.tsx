@@ -224,13 +224,15 @@ export default function AdminApprovalsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeRoles.map((roleRecord) => (
               <div key={roleRecord.id} className="bg-white rounded-3xl p-6 border border-[#A58079]/20 shadow-md flex flex-col h-full relative group transition-all hover:border-[#A58079]/40 hover:shadow-lg">
-                <button 
-                  onClick={() => handleDeleteRole(roleRecord.id)}
-                  title="Revogar Vínculo"
-                  className="absolute top-4 right-4 p-2 bg-red-50 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {roleRecord.user_id !== user?.id && (
+                  <button 
+                    onClick={() => handleDeleteRole(roleRecord.id)}
+                    title="Revogar Vínculo"
+                    className="absolute top-4 right-4 p-2.5 bg-red-50 text-red-500 rounded-full transition-all hover:bg-red-100 shadow-sm border border-red-100 active:scale-90"
+                  >
+                    <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                  </button>
+                )}
                 
                 <div className="flex items-start justify-between mb-4">
                   <div className={`p-3 rounded-2xl shadow-inner ${roleRecord.role === 'admin' ? 'bg-amber-100 text-amber-700' : roleRecord.role === 'nurse' ? 'bg-[#A58079]/10 text-[#A58079]' : 'bg-[#6B5C59]/10 text-[#6B5C59]'}`}>

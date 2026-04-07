@@ -1,7 +1,7 @@
 "use client"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, Users, Activity, ShieldCheck, ArrowLeftRight } from 'lucide-react'
+import { Home, Calendar, Users, Activity, ShieldCheck, ArrowLeftRight, HardDrive } from 'lucide-react'
 import { useRole } from '@/components/layout/RoleContext'
 
 export default function MobileBottomNav() {
@@ -13,6 +13,7 @@ export default function MobileBottomNav() {
     { name: 'Agenda Híbrida', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
     { name: 'Pacientes & Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
     { name: 'Homologações', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
+    { name: 'Dados', href: '/admin/storage', icon: HardDrive, roles: ['admin'] },
   ]
   const navItems = allNavItems.filter(item => item.roles.includes(role))
 

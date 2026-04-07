@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, Users, Activity, Home, UserCheck, ArrowLeftRight, ShieldCheck, ChevronRight, ChevronLeft, Menu } from 'lucide-react'
+import { Calendar, Users, Activity, Home, UserCheck, ArrowLeftRight, ShieldCheck, ChevronRight, ChevronLeft, Menu, HardDrive } from 'lucide-react'
 import { useRole } from '@/components/layout/RoleContext'
 
 export default function Sidebar() {
@@ -15,6 +15,7 @@ export default function Sidebar() {
     { name: 'Agenda Híbrida', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
     { name: 'Pacientes & Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
     { name: 'Homologações', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
+    { name: 'Gerenciamento de Dados', href: '/admin/storage', icon: HardDrive, roles: ['admin'] },
   ]
   const navItems = allNavItems.filter(item => item.roles.includes(role))
 

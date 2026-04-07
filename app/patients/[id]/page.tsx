@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, CalendarPlus, Activity, Loader2, Check, Plus, ChevronDown, Lock } from 'lucide-react'
+import { ArrowLeft, CalendarPlus, Activity, Loader2, Check, Plus, ChevronDown, Lock, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRole } from '@/components/layout/RoleContext'
 import WoundRecordForm from '@/components/wound-records/WoundRecordForm'

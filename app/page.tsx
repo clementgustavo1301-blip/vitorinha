@@ -92,20 +92,45 @@ export default function Dashboard() {
                     const isHome = appt.type === 'home'
 
                     return (
-                      <Link 
-                        href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                      <div 
                         key={appt.id} 
-                        className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex items-center gap-3 md:gap-4 group transition hover:shadow-md active:scale-[0.98] md:active:scale-100 md:hover:-translate-y-0.5 cursor-pointer`}
+                        className={`p-3 md:p-4 rounded-xl md:rounded-2xl bg-[#F9F7F6] border ${isHome ? 'border-[#2D2422]/20' : 'border-[#A58079]/20'} flex items-center gap-3 md:gap-4 transition hover:shadow-md active:scale-[0.98] md:active:scale-100 md:hover:-translate-y-0.5 group relative`}
                       >
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex items-center justify-center font-bold border text-sm md:text-base shrink-0 group-hover:scale-105 transition`}>{initials}</div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-[#2D2422] group-hover:text-[#A58079] transition-colors text-sm md:text-base truncate">{name}</h3>
+                        {/* Attendance Link (Background) */}
+                        <Link 
+                          href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                          className="absolute inset-0 z-0 rounded-xl md:rounded-2xl"
+                          title="Registrar Atendimento"
+                        />
+
+                        {/* Record Link (Avatar/Initials) */}
+                        <Link 
+                          href={`/patients/${appt.patient_id}`}
+                          className={`relative z-10 w-10 h-10 md:w-12 md:h-12 rounded-full ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} flex items-center justify-center font-bold border text-sm md:text-base shrink-0 hover:scale-110 transition shadow-sm`}
+                          title="Ver Prontuário"
+                        >
+                          {initials}
+                        </Link>
+
+                        <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
+                          <Link 
+                            href={`/patients/${appt.patient_id}`}
+                            className="pointer-events-auto inline-block max-w-full"
+                            title="Ver Prontuário"
+                          >
+                            <h3 className="font-semibold text-[#2D2422] hover:text-[#A58079] transition-colors text-sm md:text-base truncate">{name}</h3>
+                          </Link>
                           <p className="text-xs md:text-sm text-[#6B5C59] truncate">{appt.notes || (isHome ? 'Domiciliar' : 'Clínica')} ({date} às {time})</p>
                         </div>
-                        <span className={`hidden sm:inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-xs font-semibold ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20'} border shrink-0`}>
+
+                        <Link 
+                          href={`/patients/${appt.patient_id}?new=true&appointment_id=${appt.id}`}
+                          className={`relative z-10 hidden sm:inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-xs font-semibold ${isHome ? 'bg-[#2D2422]/10 text-[#2D2422] border-[#2D2422]/20 hover:bg-[#2D2422]/20' : 'bg-[#A58079]/10 text-[#A58079] border-[#A58079]/20 hover:bg-[#A58079]/20'} border shrink-0 transition-all shadow-sm`}
+                          title="Registrar Atendimento"
+                        >
                           {isHome ? 'Domiciliar' : 'Clínica'}
-                        </span>
-                      </Link>
+                        </Link>
+                      </div>
                     )
                   })}
                 </div>

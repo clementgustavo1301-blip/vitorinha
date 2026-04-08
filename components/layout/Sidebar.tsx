@@ -71,7 +71,7 @@ export default function Sidebar() {
           
           <Link 
             href="/role-selection"
-            title="Trocar Vínculo"
+            title="Alterar Vínculo"
             className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-[#1A1514] text-[#E8DCDA] hover:text-[#A58079] hover:bg-[#2D2422] border border-[#A58079]/20 transition-all`}
           >
             <ArrowLeftRight className="w-4 h-4" />

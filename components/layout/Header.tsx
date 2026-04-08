@@ -47,7 +47,7 @@ export default function Header() {
         <Link 
           href="/role-selection"
           className="p-2 text-[#E8DCDA] hover:text-[#A58079] hover:bg-[#A58079]/10 rounded-full transition-all cursor-pointer relative md:hidden"
-          title="Trocar Vínculo"
+          title="Alterar Vínculo"
         >
           <ArrowLeftRight className="h-5 w-5" />
         </Link>
@@ -163,7 +163,7 @@ export default function Header() {
                 className="w-full py-2.5 flex items-center justify-center gap-2 text-xs font-semibold rounded-full bg-[#1A1514] text-[#E8DCDA] hover:text-[#A58079] border border-[#A58079]/20 transition-colors"
               >
                 <ArrowLeftRight className="w-4 h-4" />
-                Trocar Vínculo
+                Alterar Vínculo
               </Link>
             </div>
           </div>

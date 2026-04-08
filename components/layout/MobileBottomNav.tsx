@@ -53,12 +53,12 @@ export default function MobileBottomNav() {
           <Link
             href="/role-selection"
             className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-2xl transition-all duration-300 min-w-[56px] text-[#E8DCDA]/60 active:scale-95"
-            title="Trocar Vínculo"
+            title="Alterar Vínculo"
           >
             <div className="p-1.5 rounded-xl transition-all duration-300">
               <ArrowLeftRight className="h-5 w-5" />
             </div>
-            <span className="text-[10px] font-semibold tracking-wide">Trocar Vínculo</span>
+            <span className="text-[10px] font-semibold tracking-wide">Alterar Vínculo</span>
           </Link>
         </div>
       </div>

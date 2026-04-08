@@ -43,11 +43,6 @@ interface ActiveRoleRecord {
   user_id: string
 }
 
-interface ProfileRecord {
-  full_name: string | null
-  id: string
-}
-
 export default function AdminApprovalsPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'pending' | 'active'>('pending')
@@ -65,19 +60,27 @@ export default function AdminApprovalsPage() {
       return {}
     }
 
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .in('id', uniqueIds)
+    const response = await fetch('/api/admin/users/names', {
+      body: JSON.stringify({ userIds: uniqueIds }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    })
 
-    const names: Record<string, string> = {}
-
-    for (const profile of (data ?? []) as ProfileRecord[]) {
-      names[profile.id] = profile.full_name || 'Sem nome'
+    const payload = (await response.json()) as {
+      error?: string
+      names?: Record<string, string>
     }
 
+    if (!response.ok) {
+      throw new Error(payload.error || 'Nao foi possivel carregar os nomes dos usuarios.')
+    }
+
+    const names: Record<string, string> = {}
+    Object.assign(names, payload.names ?? {})
     return names
-  }, [supabase])
+  }, [])
 
   useEffect(() => {
     if (role !== 'admin') {

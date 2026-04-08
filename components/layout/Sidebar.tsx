@@ -1,80 +1,81 @@
 "use client"
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, Users, Activity, Home, UserCheck, ArrowLeftRight, ShieldCheck, ChevronRight, ChevronLeft, Menu, HardDrive } from 'lucide-react'
+import { Activity, ArrowLeftRight, ChevronLeft, Menu } from 'lucide-react'
+
 import { useRole } from '@/components/layout/RoleContext'
+import { getNavItems, isNavItemActive } from '@/lib/navigation'
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { role, setRole } = useRole()
+  const { role } = useRole()
   const [isExpanded, setIsExpanded] = useState(false)
 
-  const allNavItems = [
-    { name: 'Dashboard', href: '/', icon: Home, roles: ['nurse', 'receptionist', 'admin'] },
-    { name: 'Agenda Híbrida', href: '/calendar', icon: Calendar, roles: ['nurse', 'receptionist', 'admin'] },
-    { name: 'Pacientes & Prontuários', href: '/patients', icon: Users, roles: ['nurse', 'admin'] },
-    { name: 'Homologações', href: '/admin/approvals', icon: ShieldCheck, roles: ['admin'] },
-    { name: 'Gerenciamento de Dados', href: '/admin/storage', icon: HardDrive, roles: ['admin'] },
-  ]
-  const navItems = allNavItems.filter(item => item.roles.includes(role))
+  const navItems = getNavItems(role)
 
   return (
-    <aside className={`${isExpanded ? 'w-64' : 'w-[84px]'} flex-shrink-0 hidden md:flex flex-col bg-[#1A1514] text-[#F9F7F6] border-r border-[#A58079]/20 shadow-2xl z-20 transition-all duration-300 overflow-hidden`}>
-      <div className={`h-16 flex items-center border-b border-[#A58079]/20 transition-all ${isExpanded ? 'px-6 justify-between' : 'justify-center'}`}>
+    <aside className={`${isExpanded ? 'w-64' : 'w-[84px]'} flex-shrink-0 hidden md:flex flex-col overflow-hidden border-r border-[#A58079]/20 bg-[#1A1514] text-[#F9F7F6] shadow-2xl transition-all duration-300`}>
+      <div className={`h-16 flex items-center border-b border-[#A58079]/20 transition-all ${isExpanded ? 'justify-between px-6' : 'justify-center'}`}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <Activity className="h-6 w-6 text-[#A58079] flex-shrink-0" />
-          {isExpanded && <span className="font-bold text-white whitespace-nowrap">Vitória Luz</span>}
+          <Activity className="h-6 w-6 flex-shrink-0 text-[#A58079]" />
+          {isExpanded && <span className="whitespace-nowrap font-bold text-white">Vitoria Luz</span>}
         </div>
-        <button 
-          onClick={() => setIsExpanded(!isExpanded)} 
-          className="text-[#A58079] hover:text-white p-1 rounded-md hover:bg-[#2D2422] transition-colors"
+        <button
+          onClick={() => setIsExpanded((current) => !current)}
+          className="rounded-md p-1 text-[#A58079] transition-colors hover:bg-[#2D2422] hover:text-white"
         >
-          {isExpanded ? <ChevronLeft className="w-5 h-5 flex-shrink-0" /> : <Menu className="w-5 h-5 flex-shrink-0" />}
+          {isExpanded ? <ChevronLeft className="h-5 w-5 flex-shrink-0" /> : <Menu className="h-5 w-5 flex-shrink-0" />}
         </button>
       </div>
-      <nav className="flex-1 px-3 py-6 space-y-4 overflow-y-auto overflow-x-hidden no-scrollbar">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              title={!isExpanded ? item.name : undefined}
-              className={`flex items-center gap-3 px-3 py-3 rounded-2xl transition-all duration-300 cursor-pointer ${
-                isExpanded ? 'w-full' : 'w-12 h-12 justify-center mx-auto'
-              } ${
-                isActive 
-                  ? 'bg-[#A58079] text-white shadow-[0_4px_14px_rgba(165,128,121,0.4)]' 
-                  : 'text-[#E8DCDA] hover:bg-[#2D2422] hover:text-[#A58079]'
-              }`}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {isExpanded && <span className="font-medium text-sm whitespace-nowrap overflow-hidden">{item.name}</span>}
-            </Link>
-          )
-        })}
+
+      <nav className="no-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-3 py-6">
+        <div className="space-y-4">
+          {navItems.map((item) => {
+            const isActive = isNavItemActive(pathname, item.href)
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                title={!isExpanded ? item.label : undefined}
+                className={`flex items-center gap-3 rounded-2xl px-3 py-3 transition-all duration-300 ${
+                  isExpanded ? 'w-full' : 'mx-auto h-12 w-12 justify-center'
+                } ${
+                  isActive
+                    ? 'bg-[#A58079] text-white shadow-[0_4px_14px_rgba(165,128,121,0.4)]'
+                    : 'text-[#E8DCDA] hover:bg-[#2D2422] hover:text-[#A58079]'
+                }`}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {isExpanded && <span className="overflow-hidden whitespace-nowrap text-sm font-medium">{item.label}</span>}
+              </Link>
+            )
+          })}
+        </div>
       </nav>
-      <div className="p-3 border-t border-[#A58079]/20">
-        <div className={`flex ${isExpanded ? 'flex-row px-3' : 'flex-col'} items-center gap-4 py-4 justify-between transition-all`}>
+
+      <div className="border-t border-[#A58079]/20 p-3">
+        <div className={`flex items-center justify-between gap-4 py-4 transition-all ${isExpanded ? 'flex-row px-3' : 'flex-col'}`}>
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 flex-shrink-0 rounded-xl bg-[#2D2422] border border-[#A58079]/30 flex items-center justify-center text-[#A58079] font-bold shadow-inner">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#A58079]/30 bg-[#2D2422] font-bold text-[#A58079] shadow-inner">
               {role === 'admin' ? 'AD' : role === 'nurse' ? 'VL' : 'RC'}
             </div>
             {isExpanded && (
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-white whitespace-nowrap">Seu Perfil</span>
-                <span className="text-xs text-[#A58079] whitespace-nowrap capitalize">{role}</span>
+                <span className="whitespace-nowrap text-sm font-bold text-white">Seu Perfil</span>
+                <span className="whitespace-nowrap text-xs capitalize text-[#A58079]">{role}</span>
               </div>
             )}
           </div>
-          
-          <Link 
+
+          <Link
             href="/role-selection"
-            title="Alterar Vínculo"
-            className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-[#1A1514] text-[#E8DCDA] hover:text-[#A58079] hover:bg-[#2D2422] border border-[#A58079]/20 transition-all`}
+            title="Alterar Vinculo"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#A58079]/20 bg-[#1A1514] text-[#E8DCDA] transition-all hover:bg-[#2D2422] hover:text-[#A58079]"
           >
-            <ArrowLeftRight className="w-4 h-4" />
+            <ArrowLeftRight className="h-4 w-4" />
           </Link>
         </div>
       </div>

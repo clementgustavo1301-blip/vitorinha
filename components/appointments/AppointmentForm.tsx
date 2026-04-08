@@ -1,17 +1,30 @@
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Loader2, Calendar, Clock, MapPin, Building2, User, Check, X, Phone, ArrowLeft, Hash } from 'lucide-react'
+import { Search, Loader2, Calendar, MapPin, Building2, User, Check, X, Phone, ArrowLeft, Hash } from 'lucide-react'
 import CustomSelect from '@/components/ui/CustomSelect'
 
 interface AppointmentFormProps {
+  mode?: 'scheduled' | 'immediate'
   onSuccess?: () => void
   onCancel?: () => void
   initialType?: 'clinic' | 'home'
 }
 
-export default function AppointmentForm({ onSuccess, onCancel, initialType = 'clinic' }: AppointmentFormProps) {
+function getCurrentLocalDateTime() {
+  const now = new Date()
+  const timezoneOffset = now.getTimezoneOffset() * 60_000
+
+  return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 16)
+}
+
+export default function AppointmentForm({
+  mode = 'scheduled',
+  onSuccess,
+  onCancel,
+  initialType = 'clinic',
+}: AppointmentFormProps) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -27,7 +40,7 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
   const [cep, setCep] = useState('')
   const [address, setAddress] = useState('')
   const [addressNumber, setAddressNumber] = useState('')
-  const [scheduledAt, setScheduledAt] = useState('')
+  const [scheduledAt, setScheduledAt] = useState(() => (mode === 'immediate' ? getCurrentLocalDateTime() : ''))
   const [type, setType] = useState<'clinic' | 'home'>(initialType)
   const [entryType, setEntryType] = useState('first_time')
   const [notes, setNotes] = useState('')
@@ -74,7 +87,7 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
     setSearching(true)
     setError('')
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('patients')
         .select('*')
         .eq('cpf', cleanCpf)
@@ -152,8 +165,9 @@ export default function AppointmentForm({ onSuccess, onCancel, initialType = 'cl
         else router.push('/')
       }, 2000)
 
-    } catch (err: any) {
-      setError(err.message || 'Erro ao agendar consulta. Verifique os dados.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao agendar consulta. Verifique os dados.'
+      setError(message)
       setLoading(false)
     }
   }

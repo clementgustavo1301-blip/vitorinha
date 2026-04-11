@@ -118,7 +118,13 @@ export default function AdminApprovalsPage() {
     void fetchData()
   }, [clinicId, fetchUserNames, role, supabase])
 
-  const getUserName = (userId: string) => userNames[userId] || `Usuario ${userId.slice(0, 5)}...`
+  const getUserName = (userId: string) => {
+    if (userId === user?.id) {
+      return user.user_metadata?.full_name || user.email || `Usuario ${userId.slice(0, 5)}...`
+    }
+
+    return userNames[userId] || `Usuario ${userId.slice(0, 5)}...`
+  }
   const getClinicName = (clinicJoin: ClinicJoin) => clinicJoin?.[0]?.name || 'Clinica sem nome'
 
   const getRoleLabel = (roleName: ManagedRole) => {
@@ -327,20 +333,8 @@ export default function AdminApprovalsPage() {
             const isCurrentUserRole = roleRecord.user_id === user?.id
 
             return (
-              <div key={roleRecord.id} className="group relative flex h-full flex-col rounded-3xl border border-[#A58079]/20 bg-white p-6 shadow-md transition-all hover:border-[#A58079]/40 hover:shadow-lg">
-                <button
-                  onClick={() => handleDeleteRole(roleRecord)}
-                  title={isCurrentUserRole ? 'Revogar meu vinculo' : 'Revogar vinculo'}
-                  className={`absolute right-4 top-4 rounded-full border p-2.5 shadow-sm transition-all active:scale-90 ${
-                    isCurrentUserRole
-                      ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                      : 'border-red-100 bg-red-50 text-red-500 hover:bg-red-100'
-                  }`}
-                >
-                  <Trash2 className="h-4 w-4 md:h-5 md:w-5" />
-                </button>
-
-                <div className="mb-4 flex items-start justify-between">
+              <div key={roleRecord.id} className="group flex h-full flex-col rounded-3xl border border-[#A58079]/20 bg-white p-6 shadow-md transition-all hover:border-[#A58079]/40 hover:shadow-lg">
+                <div className="mb-4 flex items-start justify-between gap-3">
                   <div className={`rounded-2xl p-3 shadow-inner ${
                     roleRecord.role === 'admin'
                       ? 'bg-amber-100 text-amber-700'
@@ -350,9 +344,18 @@ export default function AdminApprovalsPage() {
                   }`}>
                     <Shield className="h-6 w-6" />
                   </div>
-                  <span className="flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700">
-                    <CheckCircle2 className="h-3 w-3" /> Ativo
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700">
+                      <CheckCircle2 className="h-3 w-3" /> Ativo
+                    </span>
+                    <button
+                      onClick={() => handleDeleteRole(roleRecord)}
+                      title={isCurrentUserRole ? 'Revogar meu vinculo' : 'Revogar vinculo'}
+                      className="pointer-events-none inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-200 bg-white text-red-500 opacity-0 shadow-sm transition-all duration-200 active:scale-90 group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-red-50 focus:pointer-events-auto focus:opacity-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <h3 className="mb-1 text-lg font-bold text-[#2D2422]">{getUserName(roleRecord.user_id)}</h3>
